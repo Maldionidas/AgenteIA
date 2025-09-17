@@ -20,6 +20,7 @@ LLAMA_COLOR = (255, 180, 0)  # naranja para la explosión
 BASE_COLOR = (0, 0, 255)   # Azul para la base
 
 # Bombas
+#tiempo que tarda en explotar
 FUSIBLE_MS = 1800
 DURACION_LLAMA_MS = 350
 ALCANCE_LLAMA = 1

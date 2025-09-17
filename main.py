@@ -31,8 +31,11 @@ while corriendo:
             if evento.key == pygame.K_SPACE:  # colocar bomba
                 if jugador.bombas_restantes > 0:
                     #celda = (jugador.fila, jugador.col)
+                    #verifica si hay una bomba activa si hay, no puedes colocar otra
                     if not any(not b.exploto for b in bombas):
+                        #saca la coordenada de el jugador
                         celda = (jugador.fila, jugador.col)
+                        #dibuja la bomba y resta una bomba disponible
                         bombas.append(Bomba(celda, ahora))
                         jugador.bombas_restantes -= 1
                 
