@@ -26,7 +26,7 @@ clock = pygame.time.Clock()
 
 while corriendo:
     ahora = pygame.time.get_ticks()
-
+    ia.actualizar(mapa, bombas, ahora)
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             corriendo = False
@@ -53,10 +53,13 @@ while corriendo:
      # Recargar bombas si está en la base
     if jugador.fila == 1 and jugador.col == 1:
         jugador.bombas_restantes = jugador.max_bombas
-    '''
+    
     accion_ia = ia.decidir()
     ia.mover(accion_ia, mapa)
     ia.colocar_bomba(ahora, bombas)
+    '''
+    
+
 
 
     # Explosiones

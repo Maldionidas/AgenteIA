@@ -43,12 +43,12 @@ class Bomba:
 #verifica si las llamas siguen activas
     def llamas_activas(self, ahora):
         return self.exploto and (ahora - self.t_explosion <= DURACION_LLAMA_MS)
-#dibuja la bomba o las llamas si exploto
+#
     def dibujar(self, pantalla, ahora):
         f, c = self.celda
         if not self.exploto:
             pygame.draw.circle(pantalla, BOMBA_COLOR,
-                               (c*TAM + TAM//2, f*TAM + TAM//2), TAM//3)
+                               (c*TAM + TAM//2, f*TAM + TAM//2), TAM//3-4)
         elif self.llamas_activas(ahora):
             for f, c in self.llamas:
                 pygame.draw.rect(pantalla, LLAMA_COLOR,
