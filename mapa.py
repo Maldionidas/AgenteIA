@@ -22,9 +22,9 @@ def generar_mapa(muros_fijos=None,pelotas=None):
             if 0 <= f < FILAS and 0 <= c < COLS:
                 mapa[f][c] = CELDA_MURO
 
-    # Agregar pelotas personalizadas
-    if pelotas:
-        for f, c in pelotas:
-            if 0 <= f < FILAS and 0 <= c < COLS:
-                mapa[f][c] = CELDA_PELOTA
-    return mapa
+        # Agregar pelotas personalizadas
+        if pelotas:
+            for f, c in pelotas:
+                if 0 <= f < FILAS and 0 <= c < COLS:
+                    mapa[f][c] = CELDA_PELOTA
+        return mapa

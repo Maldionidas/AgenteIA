@@ -7,6 +7,10 @@ class Escenario:
         self.base = base#posicion de la base (1,1)
         self.deposito = deposito
 
+        original = pygame.image.load("personajes/raton.png").convert_alpha()
+        raton_size = int(TAM * 0.4)  # más pequeño que la celda
+        self.raton_img = pygame.transform.scale(original, (raton_size, raton_size))
+
     def dibujar(self, pantalla):
         for fila in range(FILAS):
             for col in range(COLS):
@@ -27,8 +31,8 @@ class Escenario:
 
                 # Pelota
                 elif valor == CELDA_PELOTA: 
-                    pygame.draw.circle(pantalla, (200, 200, 50),
-                                       (x + TAM // 2, y + TAM // 2), TAM // 3)
+                    img_w, img_h = self.raton_img.get_size()
+                    pantalla.blit(self.raton_img, (x + (TAM - img_w)//2, y + (TAM - img_h)//2))
 
                 # Vacío
                 else:

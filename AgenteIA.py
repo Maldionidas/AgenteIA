@@ -32,6 +32,11 @@ class AgenteIA:
             self.images[k] = pygame.transform.scale(img, (TAM, TAM))
         self.dir = "front"
 
+        self.raton_img = pygame.image.load("personajes/raton.png").convert_alpha()
+        raton_size = int(TAM * 0.4)  # más pequeño que el gato
+        self.raton_img = pygame.transform.scale(self.raton_img, (raton_size, raton_size))
+
+
     # ---------------- BFS ----------------
     def bfs(self, mapa, start, goals):
         """Retorna la ruta (lista de acciones) desde start hasta cualquiera en goals evitando muros."""
@@ -95,6 +100,8 @@ class AgenteIA:
             self.recolectadas += 1
             self.objetivo = None
             self.ruta = []
+            mapa[self.base[0]][self.base[1]] = CELDA_PELOTA
+
 
         # Decisión de objetivo si no hay ruta activa
         if not self.ruta:
@@ -145,6 +152,13 @@ class AgenteIA:
         x = self.col * TAM
         y = self.fila * TAM
         pantalla.blit(self.images[self.dir], (x, y))
+
+        if self.cargando:
+            img_w, img_h = self.raton_img.get_size()
+            offset_x = (TAM - img_w) // 2
+            offset_y = (TAM - img_h) // 2 - 6  # un poquito arriba, como en la espalda
+            pantalla.blit(self.raton_img, (x + offset_x, y + offset_y))
+
 
         # contador visible en la celda del depósito (esquina sup. derecha)
         dx = self.deposito[1] * TAM
