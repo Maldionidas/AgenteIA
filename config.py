@@ -18,6 +18,7 @@ JUGADOR = (50, 100, 255)
 #BOMBA_COLOR = (0, 0, 0)   # negro para la bomba
 LLAMA_COLOR = (255, 180, 0)  # naranja para la explosión
 BASE_COLOR = (0, 0, 255)   # Azul para la base
+DEPOSITO_COLOR = (0, 255, 0)
 
 # Bombas
 #tiempo que tarda en explotar
@@ -31,4 +32,5 @@ pygame.font.init()
 FUENTE = pygame.font.SysFont("Arial", 24)
 #casilla para recargar bombas
 BASE = (1, 1)
+DEPOSITO = (1, 11)
 VELOCIDAD = 4

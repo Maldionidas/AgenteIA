@@ -2,9 +2,10 @@ import pygame
 from config import *
 # --- Clase Escenario ---
 class Escenario:
-    def __init__(self, mapa, base):
+    def __init__(self, mapa, base, deposito):
         self.mapa = mapa#matriz del mapa
         self.base = base#posicion de la base (1,1)
+        self.deposito = deposito
 
     def dibujar(self, pantalla):
         for fila in range(FILAS):
@@ -16,6 +17,9 @@ class Escenario:
                 # Base
                 if (fila, col) == self.base:
                     pygame.draw.rect(pantalla, BASE_COLOR, (x, y, TAM, TAM))
+
+                elif (fila, col) == self.deposito:
+                    pygame.draw.rect(pantalla, DEPOSITO_COLOR, (x, y, TAM, TAM))
 
                 # Muros
                 elif valor == CELDA_MURO:

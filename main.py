@@ -1,6 +1,6 @@
 import pygame
 import random
-from config import ANCHO, ALTO, FUENTE, BASE, VELOCIDAD
+from config import ANCHO, ALTO, FUENTE, BASE, DEPOSITO, VELOCIDAD
 from mapa import generar_mapa
 from escenario import Escenario
 #from jugador import Jugador
@@ -16,11 +16,12 @@ pygame.display.set_caption("Bomberman Grid Movement")#titulo
 # Lista de posiciones (fila, col)
 mis_muros = [(2,2), (2,3), (3,2), (5,5), (6,6)]
 mis_pelotas = [(4,4), (7,7), (8,3), (9,9)]
+deposito=(1, 8)
 mapa = generar_mapa(mis_muros, mis_pelotas)
-escenario = Escenario(mapa, BASE)
+escenario = Escenario(mapa, BASE, DEPOSITO)
 #jugador = Jugador(1, 1)  # posición inicial del jugador
 bombas = []  # lista de bombas
-ia = AgenteIA(1, 1,BASE)  # por ejemplo, empieza abajo a la derecha
+ia = AgenteIA(1, 1,BASE, DEPOSITO)  # por ejemplo, empieza abajo a la derecha
 
 
 
