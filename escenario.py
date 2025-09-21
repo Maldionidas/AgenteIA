@@ -10,18 +10,24 @@ class Escenario:
         for fila in range(FILAS):
             for col in range(COLS):
                 valor = self.mapa[fila][col]
-                #si es la base, dibujarla de otro color
+                x = col * TAM
+                y = fila * TAM
+
+                # Base
                 if (fila, col) == self.base:
-                    color = BASE_COLOR
+                    pygame.draw.rect(pantalla, BASE_COLOR, (x, y, TAM, TAM))
+
+                # Muros
+                elif valor == CELDA_MURO:
+                    pygame.draw.rect(pantalla, MURO, (x, y, TAM, TAM))
+
+                # Pelota
+                elif valor == CELDA_PELOTA: 
+                    pygame.draw.circle(pantalla, (200, 200, 50),
+                                       (x + TAM // 2, y + TAM // 2), TAM // 3)
+
+                # Vacío
                 else:
-                    # determinar color según el valor de la celda
-                    if valor == CELDA_VACIA:
-                        color = VACIO
-                    elif valor == CELDA_MURO:
-                        color = MURO
-                    else:
-                        color = DESTRUIBLE
-                        #si es destructible, dibujar un rectángulo marrón
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
                 # dibujar la celda
-                pygame.draw.rect(pantalla, color, (col*TAM, fila*TAM, TAM, TAM))
                 pygame.draw.rect(pantalla, (100, 100, 100), (col*TAM, fila*TAM, TAM, TAM), 1)

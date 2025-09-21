@@ -8,14 +8,14 @@ ANCHO, ALTO = COLS * TAM, FILAS * TAM #dimension del mapa
 # Constantes de celdas
 CELDA_VACIA = 0
 CELDA_MURO = 1
-CELDA_DESTRUIBLE = 2
+CELDA_PELOTA = 2
 
 # Colores de los objetos
 VACIO = (200, 200, 200)
 MURO = (60, 60, 60)
 DESTRUIBLE = (160, 100, 40)
 JUGADOR = (50, 100, 255)
-BOMBA_COLOR = (0, 0, 0)   # negro para la bomba
+#BOMBA_COLOR = (0, 0, 0)   # negro para la bomba
 LLAMA_COLOR = (255, 180, 0)  # naranja para la explosión
 BASE_COLOR = (0, 0, 255)   # Azul para la base
 

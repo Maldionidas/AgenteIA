@@ -1,26 +1,30 @@
 import random
-from config import FILAS, COLS, CELDA_MURO, CELDA_DESTRUIBLE, CELDA_VACIA
+from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_PELOTA
 
-def generar_mapa():
-    mapa = []
-    for fila in range(FILAS):
-        fila_data = []
-        for col in range(COLS):
-            #genera margen de muros y muros interiores no destruibles
-            if fila == 0 or fila == FILAS-1 or col == 0 or col == COLS-1:
-                fila_data.append(CELDA_MURO)
-                #muros interiores no destruibles, intercambiando fila y columna pares
-            elif fila % 2 == 0 and col % 2 == 0:
-                fila_data.append(CELDA_MURO)
-            else:
-                #genera muros destruibles aleatoriamente
-                fila_data.append(CELDA_DESTRUIBLE if random.random() < 0.3 else CELDA_VACIA)
-        mapa.append(fila_data)
+import random
 
-    # Zona inicial limpia
-    mapa[1][1] = CELDA_VACIA
-    mapa[1][2] = CELDA_VACIA
-    mapa[2][1] = CELDA_VACIA
+
+
+def generar_mapa(muros_fijos=None,pelotas=None):
+    """Genera un mapa con muros fijos y pelotas aleatorias."""
+    
+    mapa = [[CELDA_VACIA for _ in range(COLS)] for _ in range(FILAS)]
+
+    # Bordes automáticos
+    for f in range(FILAS):
+        for c in range(COLS):
+            if f == 0 or f == FILAS-1 or c == 0 or c == COLS-1:
+                mapa[f][c] = CELDA_MURO
+
+    # Agregar muros fijos personalizados
+    if muros_fijos:
+        for f, c in muros_fijos:
+            if 0 <= f < FILAS and 0 <= c < COLS:
+                mapa[f][c] = CELDA_MURO
+
+    # Agregar pelotas personalizadas
+    if pelotas:
+        for f, c in pelotas:
+            if 0 <= f < FILAS and 0 <= c < COLS:
+                mapa[f][c] = CELDA_PELOTA
     return mapa
-
-mapa = generar_mapa()

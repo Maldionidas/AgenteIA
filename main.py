@@ -3,8 +3,8 @@ import random
 from config import ANCHO, ALTO, FUENTE, BASE
 from mapa import generar_mapa
 from escenario import Escenario
-from jugador import Jugador
-from bomba import Bomba
+#from jugador import Jugador
+#from bomba import Bomba
 from AgenteIA import AgenteIA
 
 pygame.init()
@@ -12,11 +12,15 @@ pantalla = pygame.display.set_mode((ANCHO, ALTO))# ventana
 pygame.display.set_caption("Bomberman Grid Movement")#titulo
 
 # --- Instancias ---
-mapa = generar_mapa()
+
+# Lista de posiciones (fila, col)
+mis_muros = [(2,2), (2,3), (3,2), (5,5), (6,6)]
+mis_pelotas = [(4,4), (7,7), (8,3), (9,9)]
+mapa = generar_mapa(mis_muros, mis_pelotas)
 escenario = Escenario(mapa, BASE)
 #jugador = Jugador(1, 1)  # posición inicial del jugador
 bombas = []  # lista de bombas
-ia = AgenteIA(1, 1)  # por ejemplo, empieza abajo a la derecha
+ia = AgenteIA(1, 1,BASE)  # por ejemplo, empieza abajo a la derecha
 
 
 
@@ -26,12 +30,25 @@ clock = pygame.time.Clock()
 
 while corriendo:
     ahora = pygame.time.get_ticks()
-    ia.actualizar(mapa, bombas, ahora)
+    ia.actualizar(mapa)
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             corriendo = False
-            
-            '''
+    
+    # --- Dibujo ---
+    pantalla.fill((0, 0, 0))
+    escenario.dibujar(pantalla)
+    #jugador.dibujar(pantalla)
+    ia.dibujar(pantalla)
+
+
+    pygame.display.flip()
+    clock.tick(10)
+
+pygame.quit()
+
+
+'''
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_SPACE:  # colocar bomba
                 if jugador.bombas_restantes > 0:
@@ -58,30 +75,3 @@ while corriendo:
     ia.mover(accion_ia, mapa)
     ia.colocar_bomba(ahora, bombas)
     '''
-    
-
-
-
-    # Explosiones
-    for b in bombas:
-        if b.deberia_explotar(ahora):
-            b.explotar(mapa)
-
-    # --- Dibujo ---
-    pantalla.fill((0, 0, 0))
-    escenario.dibujar(pantalla)
-    #jugador.dibujar(pantalla)
-    ia.dibujar(pantalla)
-
-
-    for b in bombas:
-        b.dibujar(pantalla, ahora)
-    # Dibujar contador de bombas
-    #texto = FUENTE.render(f"Bombas: {jugador.bombas_restantes}", True, (255,255,255))
-    #pantalla.blit(texto, (10, 10))  # posición arriba a la izquierda
-
-
-    pygame.display.flip()
-    clock.tick(10)
-
-pygame.quit()
