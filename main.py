@@ -1,6 +1,6 @@
 import pygame
 import random
-from config import ANCHO, ALTO, FUENTE, BASE
+from config import ANCHO, ALTO, FUENTE, BASE, VELOCIDAD
 from mapa import generar_mapa
 from escenario import Escenario
 #from jugador import Jugador
@@ -41,9 +41,8 @@ while corriendo:
     #jugador.dibujar(pantalla)
     ia.dibujar(pantalla)
 
-
     pygame.display.flip()
-    clock.tick(10)
+    clock.tick(VELOCIDAD)
 
 pygame.quit()
 

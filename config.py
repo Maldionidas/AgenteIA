@@ -31,3 +31,4 @@ pygame.font.init()
 FUENTE = pygame.font.SysFont("Arial", 24)
 #casilla para recargar bombas
 BASE = (1, 1)
+VELOCIDAD = 4

@@ -6,19 +6,28 @@ from config import FILAS, COLS, CELDA_MURO, CELDA_PELOTA, CELDA_VACIA
 COOL_DOWN_BOMBA = 2000  # ms de espera entre bombas
 
 class AgenteIA:
-    def __init__(self, fila, col,base, color=(200,50,50)):
+    def __init__(self, fila, col, base, color=(200,50,50)):
         self.fila = fila
         self.col = col
         self.color = color
-        self.radio = TAM//3
+        self.radio = TAM // 3
         self.ruta = []          # ruta hacia la caja
         self.objetivo = None    # celda de la caja actual
-        #self.bomba_activa = False
         self.recolectadas = 0
         self.cargando = False
         self.base = base
-        
-        
+
+        # === PASO 1: cargar sprites del gato y dejarlos a tamaño de celda ===
+        # Asegúrate de haber generado cat_front.png, cat_back.png, cat_left.png, cat_right.png
+        self.images = {
+            "front": pygame.image.load("personajes/cat_front.png").convert_alpha(),
+            "back":  pygame.image.load("personajes/cat_back.png").convert_alpha(),
+            "left":  pygame.image.load("personajes/cat_left.png").convert_alpha(),
+            "right": pygame.image.load("personajes/cat_right.png").convert_alpha(),
+        }
+        for k, img in self.images.items():
+            self.images[k] = pygame.transform.scale(img, (TAM, TAM))
+        self.dir = "front"
 
     def bfs(self, mapa, start, goals):
         """BFS para encontrar ruta corta evitando muros y bombas activas"""
@@ -67,10 +76,18 @@ class AgenteIA:
 
     def mover(self, accion, mapa):
         df, dc = 0, 0
-        if accion == "arriba": df = -1
-        elif accion == "abajo": df = 1
-        elif accion == "izquierda": dc = -1
-        elif accion == "derecha": dc = 1
+        if accion == "arriba":
+            df = -1
+            self.dir = "back"
+        elif accion == "abajo":
+            df = 1
+            self.dir = "front"
+        elif accion == "izquierda":
+            dc = -1
+            self.dir = "left"
+        elif accion == "derecha":
+            dc = 1
+            self.dir = "right"
 
         nueva_fila = self.fila + df
         nueva_col = self.col + dc
@@ -94,7 +111,7 @@ class AgenteIA:
                     self.ruta = []
 
     def dibujar(self, pantalla):
-        x = self.col*TAM + TAM//2
-        y = self.fila*TAM + TAM//2
-        color = (0, 0, 255) if not self.cargando else (255, 165, 0) 
-        pygame.draw.circle(pantalla, self.color, (x, y), self.radio)
+        x = self.col * TAM
+        y = self.fila * TAM
+        # blitea el sprite correcto según la dirección
+        pantalla.blit(self.images[self.dir], (x, y))
