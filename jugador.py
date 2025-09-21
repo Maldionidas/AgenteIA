@@ -34,3 +34,4 @@ class Jugador:
     #funcion para dibujar al jugador
     def dibujar(self, pantalla):
         pygame.draw.circle(pantalla, JUGADOR, (self.x, self.y), TAM//2 - 6)
+        
