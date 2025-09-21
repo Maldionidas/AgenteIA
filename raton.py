@@ -1,51 +1,52 @@
 import pygame
 
-# =============== Config ===============
-SCALE = 12   # tamaño de cada “pixel” en pantalla (sube/baja a gusto)
-OUT_PNG = "gatito_front.png"
-# Paleta (RGBA): T=transparente
-T = (0, 0, 0, 0)
-K = (0, 0, 0, 255)            # negro
-D = (50, 56, 72, 255)         # gris oscuro azulado (parches)
-W = (255, 255, 255, 255)      # blanco
-G = (132, 178, 108, 255)      # verde (hojita)
+SCALE = 12   # tamaño de cada “pixel” en pantalla
+OUT_PNG = "raton.png"
+
+# Paleta (RGBA)
+# Espacio " " = Transparente
+N = (0, 0, 0, 255)          # Negro (ojos)
+O = (128, 128, 128, 255)    # Gris oscuro
+C = (192, 192, 192, 255)    # Gris claro (cuerpo)
+B = (255, 255, 255, 255)    # Blanco (vientre, orejas)
+R = (255, 182, 193, 255)    # Rosa (nariz, patas, cola)
+T = (0, 0, 0, 0)            # Transparente
+
 
 # =============== Sprite 16x16 ===============
 # Cada carácter representa un color de la paleta
 #   ' ' = T, 'K' = negro, 'D' = gris oscuro, 'W' = blanco, 'G' = verde
 # Diseño: cara frontal con hojita arriba, orejas negras, parches grises y ojitos
 SPRITE_16 = [
-    "          K          ",
-    "         KGK         ",
-    "        KKGK         ",
-    "       KGGK          ",
-    "    K   KKK     K    ",
-    "   KWK    K    KWK   ",
-    "   KWWK   K   KWWK   ",
-    "  KWWWKKKKKKKKWWWWK  ",
-    "  KWWWWWWWWWWWWWWWK  ",
-    "  KWWWWWWWWWWWWWWWK  ",
-    " KWWWWWWWWWWWWWWWWWK ",
-    " KWWWWWWWWWWWWWWWWWK ",
-    "KWWWKKWWWWWWWWWKKWWWK",
-    "KWWWKKWWWWWWWWWKKWWWK",
-    "KWWWWWWWWWKWWWWWWWWWK",
-    "KWWWWWWWWKWKWWWWWWWWK",
-    "KWWWWWWWWWWWWWWWWWWWK",
-    " KKWWWWWWWWWWWWWWWWK ",
-    "  KKWWWWWWWWWWWWWKK  ",
-    "    KKKKKKKKKKKKK    ",
+    " OOO        OOO      ",
+    "OCCCO      OCCCO     ",
+    "OCBBCO    OCBBBCO    ",
+    "OCBBCOOOOOCBBBBCO    ",
+    "OCCBCCCCCCCCBBBCO    ",
+    " OOOCCCCCCCCCCCO     ",
+    "   NCCCNCCCCOOO      ",
+    "  OCCCCCCCCO        R",
+    " RCCCCCCCOCO       R ",
+    "  OOOOOOOCCO       R ",
+    "     OBBCCCO      R  ",
+    "     OBBCCCCO     R  ",
+    "    ROBBBRCCO     R  ",
+    "    ROBBBRCCCO   R   ",
+    "     OBBBCOCCO   R   ",
+    "     OBBBCOCCO   R   ",
+    "    RROOORROO RRR    "
 
 ]
-# Nota: es “algo así”; ajusta líneas para acercarlo más a tu referencia.
-
 
 def pixmap_to_surface(pattern, scale):
     h = len(pattern)
     w = len(pattern[0])
     surf = pygame.Surface((w*scale, h*scale), pygame.SRCALPHA)
 
-    cmap = {' ': T, 'K': K, 'D': D, 'W': W, 'G': G}
+    cmap = {
+        " ": T, "N": N, "O": O,
+        "C": C, "B": B, "R": R
+    }
 
     for y, row in enumerate(pattern):
         for x, ch in enumerate(row):
@@ -66,7 +67,7 @@ def main():
 
     # Ventana solo para ver el sprite
     win = pygame.display.set_mode((sprite.get_width(), sprite.get_height()))
-    pygame.display.set_caption("Gatito pixel – vista frontal")
+    pygame.display.set_caption("Ratón pixel – vista frontal")
 
     # Guardar PNG con fondo transparente
     pygame.image.save(sprite, OUT_PNG)
