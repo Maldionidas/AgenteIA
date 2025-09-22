@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import random
 from config import ANCHO, ALTO, FUENTE, BASE, DEPOSITO, VELOCIDAD
@@ -32,6 +34,11 @@ clock = pygame.time.Clock()
 while corriendo:
     ahora = pygame.time.get_ticks()
     ia.actualizar(mapa)
+
+    # sincroniza contadores con el escenario
+    escenario.entregados_deposito = ia.contador_deposito
+    escenario.entregados_base = ia.recolectadas
+
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             corriendo = False
@@ -41,7 +48,6 @@ while corriendo:
     escenario.dibujar(pantalla)
     #jugador.dibujar(pantalla)
     ia.dibujar(pantalla)
-
     pygame.display.flip()
     clock.tick(VELOCIDAD)
 

@@ -2,8 +2,6 @@ import pygame
 from collections import deque
 from config import TAM, FILAS, COLS, CELDA_MURO, CELDA_PELOTA, CELDA_VACIA
 
-COOL_DOWN_BOMBA = 2000  # ms de espera entre bombas
-
 class AgenteIA:
     def __init__(self, fila, col, base, deposito, color=(200,50,50)):
         self.fila = fila
@@ -11,12 +9,13 @@ class AgenteIA:
         self.color = color
         self.radio = TAM // 3
 
-        self.ruta = []            # pasos pendientes (acciones) hacia objetivo
-        self.objetivo = None      # celda objetivo actual (tupla)
-        self.cargando = False     # si trae un ratón
-        self.fue_deposito = False # ya pasó por el depósito en este ciclo
-        self.recolectadas = 0     # entregadas en base
-        self.contador_deposito = 0
+        self.ruta = []              # pasos pendientes (acciones)
+        self.objetivo = None        # celda objetivo actual
+        self.cargando = False       # trae un ratón (solo de pelota -> depósito)
+        self.fue_deposito = False   # acaba de depositar y debe ir a base
+        self.contador_deposito = 0  # cuántos dejó en depósito
+        self.recolectadas = 0       # cuántos contabilizados en base
+
         self.font = pygame.font.SysFont(None, max(14, int(TAM * 0.6)))
         self.base = base
         self.deposito = deposito
@@ -33,13 +32,18 @@ class AgenteIA:
         self.dir = "front"
 
         self.raton_img = pygame.image.load("personajes/raton.png").convert_alpha()
-        raton_size = int(TAM * 0.4)  # más pequeño que el gato
+        raton_size = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(self.raton_img, (raton_size, raton_size))
 
+        # ---------------- ENERGÍA (NUEVO) ----------------
+        # Suficiente para recorrer el contorno del mapa (~perímetro en pasos)
+        self.energia_max = 2 * (FILAS + COLS)
+        self.energia = self.energia_max
+        self.costo_paso = 1  # energía por cada cuadro recorrido
 
     # ---------------- BFS ----------------
     def bfs(self, mapa, start, goals):
-        """Retorna la ruta (lista de acciones) desde start hasta cualquiera en goals evitando muros."""
+        """Ruta (lista de acciones) desde start a cualquiera en goals evitando muros."""
         queue = deque()
         queue.append((start, []))
         visitados = set([start])
@@ -59,16 +63,16 @@ class AgenteIA:
     # --------------- Helpers ---------------
     def _ruta_hacia(self, mapa, destino):
         self.objetivo = destino
-        self.ruta = self.bfs(mapa, (self.fila, self.col), [destino])
+        self.ruta = self.bfs(mapa, (self.fila, self.col), [destino]) or []
 
     def pelota_mas_cercana(self, mapa):
-        """Busca la pelota alcanzable más cercana por BFS (por longitud de ruta)."""
+        """Pelota alcanzable más cercana por longitud de ruta."""
         pelotas = [(f, c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_PELOTA]
         mejor = None
         mejor_len = None
         for p in pelotas:
             r = self.bfs(mapa, (self.fila, self.col), [p])
-            if r:  # solo consideramos alcanzables
+            if r:
                 if mejor is None or len(r) < mejor_len:
                     mejor = p
                     mejor_len = len(r)
@@ -76,51 +80,63 @@ class AgenteIA:
 
     # --------------- Lógica principal ---------------
     def actualizar(self, mapa):
-        # Eventos por posición (más robusto que depender del objetivo actual):
-        # 1) Si pisa una pelota y NO iba cargando -> recoger
-        if not self.cargando and mapa[self.fila][self.col] == CELDA_PELOTA:
-            mapa[self.fila][self.col] = CELDA_VACIA
-            self.cargando = True
+        """
+        Flujo:
+        - Si NO cargando y NO viene de depósito: busca pelota; al pisarla, toma y va al depósito.
+        - Al pisar depósito: suelta (cargando=False, fue_deposito=True, contador_deposito++) y va a base.
+        - Al pisar base con fue_deposito=True: recolectadas++, fue_deposito=False, vuelve a buscar pelota.
+        """
+        # Recarga al pisar base (SIN cambiar la lógica original)
+        if (self.fila, self.col) == self.base and self.energia < self.energia_max:
+            self.energia = self.energia_max
+
+        # 1) Si llega a la base después de haber depositado (ya sin cargar)
+        if not self.cargando and self.fue_deposito and (self.fila, self.col) == self.base:
+            self.recolectadas += 1
             self.fue_deposito = False
             self.objetivo = None
             self.ruta = []
 
-        # 2) Si va cargando y pisa depósito y aún no había pasado -> marcar depósito
-        if self.cargando and not self.fue_deposito and (self.fila, self.col) == self.deposito:
-            # Aquí "deja" el ratón en la caja intermedia
-            self.fue_deposito = True
+        # 2) Recoger pelota SOLO si NO está cargando y NO viene de depósito
+        if not self.cargando and not self.fue_deposito:
+            if mapa[self.fila][self.col] == CELDA_PELOTA:
+                mapa[self.fila][self.col] = CELDA_VACIA
+                self.cargando = True
+                self.objetivo = None
+                self.ruta = []
+                # al recoger, su destino inmediato es el depósito
+                if self.deposito:
+                    self._ruta_hacia(mapa, self.deposito)
+
+        # 3) Si está cargando y pisa depósito -> soltar y luego ir a base
+        if self.cargando and (self.fila, self.col) == self.deposito:
+            self.cargando = False
+            self.fue_deposito = True   # ahora debe ir a base
             self.contador_deposito += 1
             self.objetivo = None
             self.ruta = []
+            # trazar ruta a base
+            self._ruta_hacia(mapa, self.base)
 
-        # 3) Si va cargando, ya pasó por depósito y pisa base -> entrega y resetea ciclo
-        if self.cargando and self.fue_deposito and (self.fila, self.col) == self.base:
-            self.cargando = False
-            self.fue_deposito = False
-            self.recolectadas += 1
-            self.objetivo = None
-            self.ruta = []
-            mapa[self.base[0]][self.base[1]] = CELDA_PELOTA
-
-
-        # Decisión de objetivo si no hay ruta activa
+        # 4) Decidir destino cuando no hay ruta activa
         if not self.ruta:
-            if not self.cargando:
-                # Buscar siguiente pelota alcanzable
-                destino = self.pelota_mas_cercana(mapa)
-                if destino:
-                    self._ruta_hacia(mapa, destino)
-                else:
-                    # No hay pelotas -> quedarse idle
-                    self.objetivo = None
-            else:
-                # Va cargando: primero al depósito (si existe y no ha pasado), luego a la base
-                if self.deposito and not self.fue_deposito:
+            if self.cargando:
+                # sigue cargando -> garantizar que va al depósito
+                if self.deposito:
                     self._ruta_hacia(mapa, self.deposito)
-                else:
+            else:
+                if self.fue_deposito:
+                    # ya depositó -> garantizar ruta a base
                     self._ruta_hacia(mapa, self.base)
+                else:
+                    # estado normal -> buscar nueva pelota
+                    destino = self.pelota_mas_cercana(mapa)
+                    if destino:
+                        self._ruta_hacia(mapa, destino)
+                    else:
+                        self.objetivo = None  # idle si no hay pelotas
 
-        # Mover un paso si hay ruta
+        # 5) Avanzar un paso
         if self.ruta:
             accion = self.ruta.pop(0)
             self.mover(accion, mapa)
@@ -129,23 +145,22 @@ class AgenteIA:
     def mover(self, accion, mapa):
         df, dc = 0, 0
         if accion == "arriba":
-            df = -1
-            self.dir = "back"
+            df = -1; self.dir = "back"
         elif accion == "abajo":
-            df = 1
-            self.dir = "front"
+            df = 1;  self.dir = "front"
         elif accion == "izquierda":
-            dc = -1
-            self.dir = "left"
+            dc = -1; self.dir = "left"
         elif accion == "derecha":
-            dc = 1
-            self.dir = "right"
+            dc = 1;  self.dir = "right"
 
         nf = self.fila + df
         nc = self.col + dc
         if 0 <= nf < FILAS and 0 <= nc < COLS and mapa[nf][nc] != CELDA_MURO:
             self.fila, self.col = nf, nc
-        # OJO: aquí NO recogemos ni entregamos; eso lo maneja actualizar()
+            # ↓↓↓ ENERGÍA por paso (sin bloquear movimiento si se agota)
+            if self.energia > 0:
+                self.energia = max(0, self.energia - self.costo_paso)
+        # recoger/soltar/base se maneja en actualizar()
 
     # --------------- Render ---------------
     def dibujar(self, pantalla):
@@ -153,20 +168,32 @@ class AgenteIA:
         y = self.fila * TAM
         pantalla.blit(self.images[self.dir], (x, y))
 
+        # Solo mostrar ratón en la espalda cuando va cargando (hacia depósito)
         if self.cargando:
             img_w, img_h = self.raton_img.get_size()
             offset_x = (TAM - img_w) // 2
-            offset_y = (TAM - img_h) // 2 - 6  # un poquito arriba, como en la espalda
+            offset_y = (TAM - img_h) // 2 - 6
             pantalla.blit(self.raton_img, (x + offset_x, y + offset_y))
 
-
-        # contador visible en la celda del depósito (esquina sup. derecha)
+        # (Opcional) contador visual en el depósito
         dx = self.deposito[1] * TAM
         dy = self.deposito[0] * TAM
         label = self.font.render(str(self.contador_deposito), True, (255, 255, 255))
         bg = label.get_rect()
         bg.topright = (dx + TAM - 3, dy + 3)
-        bg.inflate_ip(6, 2)  # un poquito de margen
-
-        pygame.draw.rect(pantalla, (0, 0, 0), bg)  # fondo negro
+        bg.inflate_ip(6, 2)
+        pygame.draw.rect(pantalla, (0, 0, 0), bg)
         pantalla.blit(label, (bg.right - label.get_width() - 3, bg.top + 1))
+
+        # ---------------- BARRA DE ENERGÍA (HUD) ----------------
+        # Fondo y marco
+        hud_x, hud_y = 8, 8
+        bar_w, bar_h = 150, 10
+        pygame.draw.rect(pantalla, (60, 60, 60), (hud_x - 2, hud_y - 2, bar_w + 4, bar_h + 4))
+        pygame.draw.rect(pantalla, (30, 30, 30), (hud_x, hud_y, bar_w, bar_h))
+        # Barra de energía proporcional
+        pct = 0 if self.energia_max == 0 else self.energia / self.energia_max
+        pygame.draw.rect(pantalla, (50, 200, 50), (hud_x, hud_y, int(bar_w * pct), bar_h))
+        # Texto
+        txt = self.font.render("ENERGIA", True, (255, 255, 255))
+        pantalla.blit(txt, (hud_x, hud_y + bar_h + 4))
