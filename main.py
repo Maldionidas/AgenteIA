@@ -17,8 +17,7 @@ pygame.display.set_caption("Bomberman Grid Movement")#titulo
 
 # Lista de posiciones (fila, col)
 deposito=(1, 8)
-mis_muros = [(2,2), (2,3), (3,2), (5,5), (6,6)]
-mapa = generar_mapa(mis_muros, num_ratones=10)
+mapa = generar_mapa(num_ratones=10, num_obstaculos=20)
 escenario = Escenario(mapa, BASE, DEPOSITO)
 #jugador = Jugador(1, 1)  # posición inicial del jugador
 bombas = []  # lista de bombas
