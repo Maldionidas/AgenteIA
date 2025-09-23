@@ -1,7 +1,7 @@
 import pygame
 #Configuración inicial
-TAM = 50 #tamaño de las celdas en px
-FILAS, COLS = 11, 13 #filas y columnas
+TAM = 40 #tamaño de las celdas en px
+FILAS, COLS = 20, 20 #filas y columnas
 ANCHO, ALTO = COLS * TAM, FILAS * TAM #dimension del mapa
 
 
@@ -15,6 +15,7 @@ VACIO = (200, 200, 200)
 MURO = (60, 60, 60)
 DESTRUIBLE = (160, 100, 40)
 JUGADOR = (50, 100, 255)
+CELDA_PELOTA = (100, 100, 100)
 #BOMBA_COLOR = (0, 0, 0)   # negro para la bomba
 LLAMA_COLOR = (255, 180, 0)  # naranja para la explosión
 BASE_COLOR = (0, 0, 255)   # Azul para la base
@@ -32,5 +33,5 @@ pygame.font.init()
 FUENTE = pygame.font.SysFont("Arial", 24)
 #casilla para recargar bombas
 BASE = (1, 1)
-DEPOSITO = (1, 11)
+DEPOSITO = (1, COLS-2)
 VELOCIDAD = 4

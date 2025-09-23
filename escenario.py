@@ -37,6 +37,7 @@ class Escenario:
                     pygame.draw.rect(pantalla, MURO, (x, y, TAM, TAM))
 
                 elif valor == CELDA_PELOTA:
+                    pygame.draw.rect(pantalla, CELDA_PELOTA, (x, y, TAM, TAM))
                     img_w, img_h = self.raton_img.get_size()
                     pantalla.blit(self.raton_img, (x + (TAM - img_w)//2, y + (TAM - img_h)//2))
 

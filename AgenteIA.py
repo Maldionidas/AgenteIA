@@ -15,10 +15,14 @@ class AgenteIA:
         self.fue_deposito = False   # acaba de depositar y debe ir a base
         self.contador_deposito = 0  # cuántos dejó en depósito
         self.recolectadas = 0       # cuántos contabilizados en base
+        self.recargando = False
 
         self.font = pygame.font.SysFont(None, max(14, int(TAM * 0.6)))
         self.base = base
         self.deposito = deposito
+
+        self.recarga_por_segundo = 10   # cuánto sube por segundo
+        self.ultimo_tick = pygame.time.get_ticks()
 
         # Sprites del gato
         self.images = {
@@ -37,7 +41,7 @@ class AgenteIA:
 
         # ---------------- ENERGÍA (NUEVO) ----------------
         # Suficiente para recorrer el contorno del mapa (~perímetro en pasos)
-        self.energia_max = 2 * (FILAS + COLS)
+        self.energia_max = 4 * (FILAS + COLS)
         self.energia = self.energia_max
         self.costo_paso = 1  # energía por cada cuadro recorrido
 
@@ -86,9 +90,43 @@ class AgenteIA:
         - Al pisar depósito: suelta (cargando=False, fue_deposito=True, contador_deposito++) y va a base.
         - Al pisar base con fue_deposito=True: recolectadas++, fue_deposito=False, vuelve a buscar pelota.
         """
-        # Recarga al pisar base (SIN cambiar la lógica original)
-        if (self.fila, self.col) == self.base and self.energia < self.energia_max:
-            self.energia = self.energia_max
+        # Recarga al pisar base (ahora gradual)
+        # ----------------- RECARGA ESTRATÉGICA -----------------
+        if (self.fila, self.col) == self.base:
+            pelotas = [(f,c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_PELOTA]
+            n_restantes = len(pelotas)
+
+            if n_restantes > 0:
+                if n_restantes >= 4:
+                    objetivo_carga = self.energia_max   # FULL si hay muchos ratones
+                else:
+                    destino = self.pelota_mas_cercana(mapa)
+                    if destino:
+                        ruta_pelota = self.bfs(mapa, (self.fila, self.col), [destino]) or []
+                        ruta_depo   = self.bfs(mapa, destino, [self.deposito]) or []
+                        ruta_base   = self.bfs(mapa, self.deposito, [self.base]) or []
+                        costo_ciclo = len(ruta_pelota) + len(ruta_depo) + len(ruta_base)
+                        objetivo_carga = min(self.energia_max, int(costo_ciclo * n_restantes * 1.2))
+                    else:
+                        objetivo_carga = self.energia_max
+            else:
+                objetivo_carga = self.energia_max
+
+            # si aún no llega al objetivo, quedarse recargando
+            if self.energia < objetivo_carga:
+                self.recargando = True
+                ahora = pygame.time.get_ticks()
+                delta_ms = ahora - self.ultimo_tick
+                recarga = (delta_ms / 1000) * self.recarga_por_segundo
+                self.energia = min(objetivo_carga, self.energia + recarga)
+                self.ultimo_tick = ahora
+                return  # 👈 importantísimo: no hace nada más, se queda quieto cargando
+            else:
+                self.recargando = False
+        # --------------------------------------------------------
+
+        self.ultimo_tick = pygame.time.get_ticks()
+        # --------------------------------------------------------
 
         # 1) Si llega a la base después de haber depositado (ya sin cargar)
         if not self.cargando and self.fue_deposito and (self.fila, self.col) == self.base:
@@ -110,31 +148,56 @@ class AgenteIA:
 
         # 3) Si está cargando y pisa depósito -> soltar y luego ir a base
         if self.cargando and (self.fila, self.col) == self.deposito:
+            # Soltar ratón
             self.cargando = False
-            self.fue_deposito = True   # ahora debe ir a base
             self.contador_deposito += 1
             self.objetivo = None
             self.ruta = []
-            # trazar ruta a base
-            self._ruta_hacia(mapa, self.base)
 
-        # 4) Decidir destino cuando no hay ruta activa
+            # Decidir si ir por otro ratón o recargar
+            destino = self.pelota_mas_cercana(mapa)
+            if destino:
+                ruta_pelota = self.bfs(mapa, (self.fila, self.col), [destino])
+                ruta_depo   = self.bfs(mapa, destino, [self.deposito]) if ruta_pelota else []
+                ruta_base   = self.bfs(mapa, self.deposito, [self.base]) if ruta_depo else []
+                costo_total = len(ruta_pelota) + len(ruta_depo) + len(ruta_base)
+
+                if self.energia >= int(costo_total * 1.2):
+                    # Sí alcanza para otro ciclo → ir a por un nuevo ratón
+                    self._ruta_hacia(mapa, destino)
+                else:
+                    # No alcanza → mejor recargar
+                    self._ruta_hacia(mapa, self.base)
+            else:
+                # No hay ratones → a recargar
+                self._ruta_hacia(mapa, self.base)
+
+       # ---------- NUEVO BLOQUE: decidir si buscar ratón o recargar ----------
         if not self.ruta:
             if self.cargando:
-                # sigue cargando -> garantizar que va al depósito
                 if self.deposito:
                     self._ruta_hacia(mapa, self.deposito)
             else:
                 if self.fue_deposito:
-                    # ya depositó -> garantizar ruta a base
                     self._ruta_hacia(mapa, self.base)
                 else:
-                    # estado normal -> buscar nueva pelota
                     destino = self.pelota_mas_cercana(mapa)
                     if destino:
-                        self._ruta_hacia(mapa, destino)
+                        ruta_pelota = self.bfs(mapa, (self.fila, self.col), [destino])
+                        ruta_depo   = self.bfs(mapa, destino, [self.deposito]) if ruta_pelota else []
+                        ruta_base   = self.bfs(mapa, self.deposito, [self.base]) if ruta_depo else []
+                        
+                        costo_total = len(ruta_pelota) + len(ruta_depo) + len(ruta_base)
+                        
+                        # 🔋 Decisión: ¿alcanza la pila?
+                        if self.energia >= int(costo_total * 1.2):
+                            self._ruta_hacia(mapa, destino)
+                        else:
+                            # No alcanza, mejor va directo a base
+                            self._ruta_hacia(mapa, self.base)
                     else:
                         self.objetivo = None  # idle si no hay pelotas
+    # ---------------------------------------------------------------------
 
         # 5) Avanzar un paso
         if self.ruta:
