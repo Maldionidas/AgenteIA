@@ -8,25 +8,17 @@ ANCHO, ALTO = COLS * TAM, FILAS * TAM #dimension del mapa
 # Constantes de celdas
 CELDA_VACIA = 0
 CELDA_MURO = 1
-CELDA_PELOTA = 2
+CELDA_RATON = 2
 
 # Colores de los objetos
 VACIO = (200, 200, 200)
 MURO = (60, 60, 60)
 DESTRUIBLE = (160, 100, 40)
 JUGADOR = (50, 100, 255)
-CELDA_PELOTA = (100, 100, 100)
-#BOMBA_COLOR = (0, 0, 0)   # negro para la bomba
-LLAMA_COLOR = (255, 180, 0)  # naranja para la explosión
+CELDA_RATON = (100, 100, 100)
 BASE_COLOR = (0, 0, 255)   # Azul para la base
 DEPOSITO_COLOR = (0, 255, 0)
 
-# Bombas
-#tiempo que tarda en explotar
-FUSIBLE_MS = 1800
-DURACION_LLAMA_MS = 350
-ALCANCE_LLAMA = 1
-MAX_BOMBAS = 3
 
 # Fuente para HUD
 pygame.font.init()

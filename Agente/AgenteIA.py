@@ -1,35 +1,39 @@
 import pygame
-import heapq
-from config import TAM, FILAS, COLS, CELDA_MURO, CELDA_PELOTA, CELDA_VACIA
-
+from config import TAM, FILAS, COLS, CELDA_MURO, CELDA_RATON, CELDA_VACIA
+from .busquedaRuta import dijkstra
+from .energia import Energia
+from .animaciones import Animaciones
+from .render import dibujar
 class AgenteIA:
     def __init__(self, fila, col, base, deposito, color=(200,50,50)):
         self.fila = fila
         self.col = col
         self.color = color
         self.radio = TAM // 3
-
+        ### --- Estados de ruta y objetivo ---
         self.ruta = []
         self.objetivo = None
         self.cargando = False
         self.fue_deposito = False
         self.contador_deposito = 0
         self.recolectadas = 0
-        self.recargando = False
+        #self.recargando = False
 
         # --- Animación de recoger ---
         self.animando = False
         self.inicio_animacion = 0
         self.tiempo_animacion = 1000  # 1 segundo en ms
-
         self.estado = "Idle"  # leyenda de estado
 
         self.font = pygame.font.SysFont(None, max(16, int(TAM * 0.6)))
         self.base = base
         self.deposito = deposito
+        
+        # Energía
+        self.energia = Energia(energia_max=200, recarga_por_segundo=10, costo_paso=1)
 
-        self.recarga_por_segundo = 10
-        self.ultimo_tick = pygame.time.get_ticks()
+
+        
 
         # Sprites del gato
         self.images = {
@@ -41,51 +45,22 @@ class AgenteIA:
         for k, img in self.images.items():
             self.images[k] = pygame.transform.scale(img, (TAM, TAM))
         self.dir = "front"
-
+        # Sprite del ratón
         self.raton_img = pygame.image.load("personajes/raton.png").convert_alpha()
         raton_size = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(self.raton_img, (raton_size, raton_size))
 
-        # Energía
-        self.energia_max = 4 * (FILAS + COLS)
-        self.energia = self.energia_max
-        self.costo_paso = 1
-
-    # ---------------- Dijkstra ----------------
-    def dijkstra(self, mapa, start, goals):
-        pq = [(0, start, [])]  # (costo acumulado, nodo, path)
-        dist = {start: 0}
-
-        while pq:
-            costo, (f, c), path = heapq.heappop(pq)
-
-            if (f, c) in goals:
-                return path
-
-            if costo > dist[(f, c)]:
-                continue
-
-            for df, dc, accion in [(1,0,"abajo"), (-1,0,"arriba"), (0,1,"derecha"), (0,-1,"izquierda")]:
-                nf, nc = f + df, c + dc
-                if 0 <= nf < len(mapa) and 0 <= nc < len(mapa[0]):
-                    if mapa[nf][nc] != CELDA_MURO:
-                        nuevo_costo = costo + 1
-                        if (nf, nc) not in dist or nuevo_costo < dist[(nf, nc)]:
-                            dist[(nf, nc)] = nuevo_costo
-                            heapq.heappush(pq, (nuevo_costo, (nf, nc), path + [accion]))
-        return []
-
     # --------------- Helpers ---------------
     def _ruta_hacia(self, mapa, destino):
         self.objetivo = destino
-        self.ruta = self.dijkstra(mapa, (self.fila, self.col), [destino]) or []
+        self.ruta = dijkstra(mapa, (self.fila, self.col), [destino]) or []
 
-    def pelota_mas_cercana(self, mapa):
-        pelotas = [(f, c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_PELOTA]
+    def raton_mas_cercano(self, mapa):
+        ratones = [(f, c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_RATON]
         mejor = None
         mejor_len = None
-        for p in pelotas:
-            r = self.dijkstra(mapa, (self.fila, self.col), [p])
+        for p in ratones:
+            r = dijkstra(mapa, (self.fila, self.col), [p])
             if r:
                 if mejor is None or len(r) < mejor_len:
                     mejor = p
@@ -95,7 +70,7 @@ class AgenteIA:
     # --------------- Lógica principal ---------------
     def actualizar(self, mapa):
         # --- Si se quedó sin energía ---
-        if self.energia <= 0:
+        if self.energia.valor <= 0:
             self.estado = "Cansancio al límite"
             return
 
@@ -112,34 +87,34 @@ class AgenteIA:
                     self._ruta_hacia(mapa, self.deposito)
             return
 
-        # --- Recarga progresiva en base ---
+        # --- Logica de la energia del agente ---
         if (self.fila, self.col) == self.base:
-            pelotas = [(f,c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_PELOTA]
-            n_restantes = len(pelotas)
+            ratones = [(f,c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_RATON]
+            n_restantes = len(ratones)
 
             if n_restantes > 0:
                 if n_restantes >= 4:
-                    objetivo_carga = self.energia_max
+                    objetivo_carga = self.energia.energia_max
                 else:
-                    destino = self.pelota_mas_cercana(mapa)
+                    destino = self.raton_mas_cercano(mapa)
                     if destino:
-                        ruta_pelota = self.dijkstra(mapa, (self.fila, self.col), [destino]) or []
-                        ruta_depo   = self.dijkstra(mapa, destino, [self.deposito]) or []
-                        ruta_base   = self.dijkstra(mapa, self.deposito, [self.base]) or []
+                        ruta_pelota = dijkstra(mapa, (self.fila, self.col), [destino]) or []
+                        ruta_depo   = dijkstra(mapa, destino, [self.deposito]) or []
+                        ruta_base   = dijkstra(mapa, self.deposito, [self.base]) or []
                         costo_ciclo = len(ruta_pelota) + len(ruta_depo) + len(ruta_base)
-                        objetivo_carga = min(self.energia_max, int(costo_ciclo * n_restantes * 1.2))
+                        objetivo_carga = min(self.energia.energia_max, int(costo_ciclo * n_restantes * 1.2))
                     else:
-                        objetivo_carga = self.energia_max
+                        objetivo_carga = self.energia.energia_max
             else:
-                objetivo_carga = self.energia_max
-
-            if self.energia < objetivo_carga:
+                objetivo_carga = self.energia.energia_max
+            
+            if self.energia.valor < objetivo_carga:
                 self.estado = "Descansando"
                 self.recargando = True
                 ahora = pygame.time.get_ticks()
                 delta_ms = ahora - self.ultimo_tick
-                recarga = (delta_ms / 1000) * self.recarga_por_segundo
-                self.energia = min(objetivo_carga, self.energia + recarga)
+                recarga = (delta_ms / 1000) * self.energia.recarga_por_segundo
+                self.energia.valor = min(objetivo_carga, self.energia.valor + recarga)
                 self.ultimo_tick = ahora
                 return
             else:
@@ -156,7 +131,7 @@ class AgenteIA:
 
         # --- Al pisar una pelota: iniciar animación ---
         if not self.cargando and not self.fue_deposito:
-            if mapa[self.fila][self.col] == CELDA_PELOTA:
+            if mapa[self.fila][self.col] == CELDA_RATON:
                 self.animando = True
                 self.inicio_animacion = pygame.time.get_ticks()
                 self.estado = "Recogiendo ratón"
@@ -171,16 +146,16 @@ class AgenteIA:
             self.objetivo = None
             self.ruta = []
 
-            destino = self.pelota_mas_cercana(mapa)
+            destino = self.raton_mas_cercano(mapa)
             if destino:
                 # rutas necesarias
-                ruta_pelota = self.dijkstra(mapa, (self.fila, self.col), [destino]) or []
-                ruta_depo   = self.dijkstra(mapa, destino, [self.deposito]) or []
-                ruta_base   = self.dijkstra(mapa, self.deposito, [self.base]) or []
+                ruta_pelota = dijkstra(mapa, (self.fila, self.col), [destino]) or []
+                ruta_depo   = dijkstra(mapa, destino, [self.deposito]) or []
+                ruta_base   = dijkstra(mapa, self.deposito, [self.base]) or []
 
                 costo_total = len(ruta_pelota) + len(ruta_depo) + len(ruta_base)
 
-                if self.energia >= int(costo_total * 1.1):
+                if self.energia.valor >= int(costo_total * 1.1):
                     self.estado = "Buscando ratón"
                     self.fue_deposito = False
                     self._ruta_hacia(mapa, destino)
@@ -204,13 +179,13 @@ class AgenteIA:
                     self.estado = "Descansando"
                     self._ruta_hacia(mapa, self.base)
                 else:
-                    destino = self.pelota_mas_cercana(mapa)
+                    destino = self.raton_mas_cercano(mapa)
                     if destino:
-                        ruta_pelota = self.dijkstra(mapa, (self.fila, self.col), [destino]) or []
-                        ruta_depo   = self.dijkstra(mapa, destino, [self.deposito]) or []
+                        ruta_pelota = dijkstra(mapa, (self.fila, self.col), [destino]) or []
+                        ruta_depo   = dijkstra(mapa, destino, [self.deposito]) or []
                         costo_hasta_depo = len(ruta_pelota) + len(ruta_depo)
 
-                        if self.energia >= int(costo_hasta_depo * 1.1):
+                        if self.energia.valor >= int(costo_hasta_depo * 1.1):
                             self.estado = "Buscando ratón"
                             self._ruta_hacia(mapa, destino)
                         else:
@@ -240,45 +215,9 @@ class AgenteIA:
         nc = self.col + dc
         if 0 <= nf < FILAS and 0 <= nc < COLS and mapa[nf][nc] != CELDA_MURO:
             self.fila, self.col = nf, nc
-            if self.energia > 0:
-                self.energia = max(0, self.energia - self.costo_paso)
-
-    # --------------- Render ---------------
+            if self.energia.valor > 0:
+                self.energia.valor = max(0, self.energia.valor - self.energia.costo_paso)
+# ---------------- Renderizado ----------------
     def dibujar(self, pantalla):
-        x = self.col * TAM
-        y = self.fila * TAM
-        pantalla.blit(self.images[self.dir], (x, y))
-
-        if self.animando:
-            img_w, img_h = self.raton_img.get_size()
-            pantalla.blit(self.raton_img, (x + (TAM - img_w)//2, y - img_h//2))
-
-        if self.cargando:
-            img_w, img_h = self.raton_img.get_size()
-            offset_x = (TAM - img_w) // 2
-            offset_y = (TAM - img_h) // 2 - 6
-            pantalla.blit(self.raton_img, (x + offset_x, y + offset_y))
-
-        dx = self.deposito[1] * TAM
-        dy = self.deposito[0] * TAM
-        label = self.font.render(str(self.contador_deposito), True, (255, 255, 255))
-        bg = label.get_rect()
-        bg.topright = (dx + TAM - 3, dy + 3)
-        bg.inflate_ip(6, 2)
-        pygame.draw.rect(pantalla, (0, 0, 0), bg)
-        pantalla.blit(label, (bg.right - label.get_width() - 3, bg.top + 1))
-
-        hud_x, hud_y = 8, 8
-        bar_w, bar_h = 150, 10
-        pygame.draw.rect(pantalla, (60, 60, 60), (hud_x - 2, hud_y - 2, bar_w + 4, bar_h + 4))
-        pygame.draw.rect(pantalla, (30, 30, 30), (hud_x, hud_y, bar_w, bar_h))
-        pct = 0 if self.energia_max == 0 else self.energia / self.energia_max
-        pygame.draw.rect(pantalla, (50, 200, 50), (hud_x, hud_y, int(bar_w * pct), bar_h))
-        txt = self.font.render("ENERGIA", True, (255, 255, 255))
-        pantalla.blit(txt, (hud_x, hud_y + bar_h + 4))
-
-        estado_txt = self.font.render(f"Estado: {self.estado}", True, (255, 255, 255))
-        fondo = estado_txt.get_rect()
-        fondo.midtop = (COLS * TAM // 2, 5)
-        pygame.draw.rect(pantalla, (0, 0, 0), fondo.inflate(10, 6))
-        pantalla.blit(estado_txt, estado_txt.get_rect(center=fondo.center))
+        dibujar(self, pantalla)
+   

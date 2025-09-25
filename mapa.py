@@ -1,11 +1,11 @@
 import random
-from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_PELOTA, BASE, DEPOSITO
+from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_RATON, BASE, DEPOSITO
 
 def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20):
     """Genera un mapa con muros, obstáculos aleatorios y ratones aleatorios en celdas libres."""
     mapa = [[CELDA_VACIA for _ in range(COLS)] for _ in range(FILAS)]
 
-    # Bordes automáticos
+    # Bordes del mapa, delimitador
     for f in range(FILAS):
         for c in range(COLS):
             if f == 0 or f == FILAS-1 or c == 0 or c == COLS-1:
@@ -24,7 +24,7 @@ def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20):
     # Seleccionar posiciones de ratones
     pelotas = random.sample(libres, min(num_ratones, len(libres)))
     for f, c in pelotas:
-        mapa[f][c] = CELDA_PELOTA
+        mapa[f][c] = CELDA_RATON
 
     # Recalcular libres para obstáculos (no base, no depósito, no ratones)
     libres = [(f, c) for f in range(FILAS) for c in range(COLS)
