@@ -37,16 +37,16 @@ class AgenteIA:
 
         # Sprites del gato
         self.images = {
-            "front": pygame.image.load("personajes/cat_front.png").convert_alpha(),
-            "back":  pygame.image.load("personajes/cat_back.png").convert_alpha(),
-            "left":  pygame.image.load("personajes/cat_left.png").convert_alpha(),
-            "right": pygame.image.load("personajes/cat_right.png").convert_alpha(),
+            "front": pygame.image.load("AgenteIA/personajes/cat_front.png").convert_alpha(),
+            "back":  pygame.image.load("AgenteIA/personajes/cat_back.png").convert_alpha(),
+            "left":  pygame.image.load("AgenteIA/personajes/cat_left.png").convert_alpha(),
+            "right": pygame.image.load("AgenteIA/personajes/cat_right.png").convert_alpha(),
         }
         for k, img in self.images.items():
             self.images[k] = pygame.transform.scale(img, (TAM, TAM))
         self.dir = "front"
         # Sprite del ratón
-        self.raton_img = pygame.image.load("personajes/raton.png").convert_alpha()
+        self.raton_img = pygame.image.load("AgenteIA/personajes/raton.png").convert_alpha()
         raton_size = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(self.raton_img, (raton_size, raton_size))
 
