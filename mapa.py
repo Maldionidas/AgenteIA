@@ -1,7 +1,7 @@
 import random
-from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_RATON, BASE, DEPOSITO
+from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_RATON, BASE, DEPOSITO, CELDA_CHARCO, CELDA_PLATO, CELDA_BOLA
 
-def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20):
+def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20, num_charcos=6, num_platos = 3, num_bolas = 4):
     """Genera un mapa con muros, obstáculos aleatorios y ratones aleatorios en celdas libres."""
     mapa = [[CELDA_VACIA for _ in range(COLS)] for _ in range(FILAS)]
 
@@ -34,5 +34,23 @@ def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20):
     obstaculos = random.sample(libres, min(num_obstaculos, len(libres)))
     for f, c in obstaculos:
         mapa[f][c] = CELDA_MURO
+
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in [BASE, DEPOSITO]]
+    charcos = random.sample(libres, min(num_charcos, len(libres)))
+    for f, c in charcos:
+        mapa[f][c] = CELDA_CHARCO
+
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in [BASE, DEPOSITO]]
+    platos = random.sample(libres, min(num_platos, len(libres)))
+    for f, c in platos:
+        mapa[f][c] = CELDA_PLATO
+
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in [BASE, DEPOSITO]]
+    bolas = random.sample(libres, min(num_bolas, len(libres)))
+    for f, c in bolas:
+        mapa[f][c] = CELDA_BOLA
 
     return mapa

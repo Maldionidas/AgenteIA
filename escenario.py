@@ -12,9 +12,45 @@ class Escenario:
         self.entregados_base = 0
         self.entregados_deposito = 0
 
-        original = pygame.image.load("AgenteIA/personajes/raton.png").convert_alpha()
+        original = pygame.image.load("personajes/raton.png").convert_alpha()
         raton_size = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(original, (raton_size, raton_size))
+
+        charco_png = pygame.image.load("personajes/charco.png").convert_alpha()
+        charco_size = int(TAM * 0.9)
+        self.charco_img = pygame.transform.smoothscale(charco_png, (charco_size, charco_size))
+
+        plato_png = pygame.image.load("personajes/plato.png").convert_alpha()
+        plato_size = int(TAM * 0.8)
+        self.plato_img = pygame.transform.smoothscale(plato_png, (plato_size, plato_size))
+
+        bola_png = pygame.image.load("personajes/bola.png").convert_alpha()
+        bola_size = int(TAM * 0.8)
+        self.bola_img = pygame.transform.smoothscale(bola_png, (bola_size, bola_size))
+
+        self._deposito_imgs = self._cargar_sprites_deposito()
+
+    def _cargar_sprites_deposito(self):
+        """Carga y escala los 5 sprites del depósito (0..4+)."""
+        nombres = [
+            "personajes/deposito_0.png",
+            "personajes/deposito_1.png",
+            "personajes/deposito_2.png",
+            "personajes/deposito_3.png",
+            "personajes/deposito_4.png",  # 4 o más
+        ]
+        imgs = []
+        size = int(TAM * 1.1)  
+        for ruta in nombres:
+            img = pygame.image.load(ruta).convert_alpha()
+            imgs.append(pygame.transform.smoothscale(img, (size, size)))
+        return imgs
+    
+    def _sprite_deposito_por_conteo(self, n):
+        """Devuelve el sprite correcto según n ratones (4 == 4+)."""
+        idx = 4 if n >= 4 else max(0, n)
+        return self._deposito_imgs[idx]
+
 
     def dibujar(self, pantalla):
         for fila in range(FILAS):
@@ -29,9 +65,11 @@ class Escenario:
                     #self._dibujar_stack(pantalla, x, y, self.entregados_base)
 
                 elif (fila, col) == self.deposito:
-                    pygame.draw.rect(pantalla, DEPOSITO_COLOR, (x, y, TAM, TAM))
-                    # Dibuja ratones depositados (inmediato al pisar depósito)
-                    self._dibujar_stack(pantalla, x, y, self.entregados_deposito)
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
+                    # Sprite del depósito según entregados_deposito
+                    dep_img = self._sprite_deposito_por_conteo(self.entregados_deposito)
+                    iw, ih = dep_img.get_size()
+                    pantalla.blit(dep_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
 
                 elif valor == CELDA_MURO:
                     pygame.draw.rect(pantalla, MURO, (x, y, TAM, TAM))
@@ -40,6 +78,21 @@ class Escenario:
                     pygame.draw.rect(pantalla, CELDA_RATON, (x, y, TAM, TAM))
                     img_w, img_h = self.raton_img.get_size()
                     pantalla.blit(self.raton_img, (x + (TAM - img_w)//2, y + (TAM - img_h)//2))
+                                    
+                elif valor == CELDA_CHARCO:
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
+                    iw, ih = self.charco_img.get_size()
+                    pantalla.blit(self.charco_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
+
+                elif valor == CELDA_PLATO:
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
+                    iw, ih = self.plato_img.get_size()
+                    pantalla.blit(self.plato_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
+
+                elif valor == CELDA_BOLA:
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
+                    iw, ih = self.bola_img.get_size()
+                    pantalla.blit(self.bola_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
 
                 else:
                     pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
