@@ -1,4 +1,4 @@
-import pygame
+import pygame, random
 from config import *
 
 # --- Clase Escenario ---
@@ -30,6 +30,12 @@ class Escenario:
 
         self._deposito_imgs = self._cargar_sprites_deposito()
 
+         # --- ÍTEMS TEMPORALES ---
+        self.platos_pos = []
+        self.bolas_pos = []
+        self.plato_timer = 0
+        self.bola_timer = 0
+
     def _cargar_sprites_deposito(self):
         """Carga y escala los 5 sprites del depósito (0..4+)."""
         nombres = [
@@ -50,6 +56,36 @@ class Escenario:
         """Devuelve el sprite correcto según n ratones (4 == 4+)."""
         idx = 4 if n >= 4 else max(0, n)
         return self._deposito_imgs[idx]
+    
+    # ================== ÍTEMS TEMPORALES ==================
+    def actualizar_items(self):
+        """Controla aparición y reposicionamiento de plato y bola."""
+        ahora = pygame.time.get_ticks()
+
+        # Plato de leche cada 10s
+        if ahora >= self.plato_timer:
+            self.platos_pos = []
+            for _ in range(4):  # ejemplo: 3 platos
+                while True:
+                    f = random.randint(1, FILAS-2)
+                    c = random.randint(1, COLS-2)
+                    if (f, c) not in [self.base, self.deposito] and self.mapa[f][c] == CELDA_VACIA:
+                        self.platos_pos.append((f, c))
+                        break
+            self.plato_timer = ahora + 10000
+
+        # cada 10s generamos varias bolas
+        if ahora >= self.bola_timer:
+            self.bolas_pos = []
+            for _ in range(4):  # ejemplo: 4 bolas
+                while True:
+                    f = random.randint(1, FILAS-2)
+                    c = random.randint(1, COLS-2)
+                    if (f, c) not in [self.base, self.deposito] and self.mapa[f][c] == CELDA_VACIA:
+                        self.bolas_pos.append((f, c))
+                        break
+            self.bola_timer = ahora + 10000
+
 
 
     def dibujar(self, pantalla):
@@ -84,20 +120,23 @@ class Escenario:
                     iw, ih = self.charco_img.get_size()
                     pantalla.blit(self.charco_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
 
-                elif valor == CELDA_PLATO:
-                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
-                    iw, ih = self.plato_img.get_size()
-                    pantalla.blit(self.plato_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
-
-                elif valor == CELDA_BOLA:
-                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
-                    iw, ih = self.bola_img.get_size()
-                    pantalla.blit(self.bola_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
 
                 else:
                     pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
 
                 pygame.draw.rect(pantalla, (100, 100, 100), (col*TAM, fila*TAM, TAM, TAM), 1)
+
+        # === Dibujo de ítems temporales ===
+        for f, c in self.platos_pos:
+            x, y = c * TAM, f * TAM
+            iw, ih = self.plato_img.get_size()
+            pantalla.blit(self.plato_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
+
+        for f, c in self.bolas_pos:
+            x, y = c * TAM, f * TAM
+            iw, ih = self.bola_img.get_size()
+            pantalla.blit(self.bola_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
+
 
     def _dibujar_stack(self, pantalla, x, y, n):
         """Dibuja n ratones en una retícula 2x2 (hasta 4)."""
