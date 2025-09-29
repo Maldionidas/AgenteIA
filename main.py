@@ -32,14 +32,13 @@ while corriendo:
     escenario.entregados_deposito = ia.contador_deposito
     escenario.entregados_base = ia.recolectadas
 
-    escenario.actualizar_items()
-
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             corriendo = False
     
     # --- Dibujo ---
     pantalla.fill((0, 0, 0))
+    escenario.actualizar_items()
     escenario.dibujar(pantalla)
     #jugador.dibujar(pantalla)
     ia.dibujar(pantalla)

@@ -10,8 +10,6 @@ CELDA_VACIA = 0
 CELDA_MURO = 1
 CELDA_RATON = 2
 CELDA_CHARCO  = 3
-CELDA_PLATO = 4
-CELDA_BOLA = 5
 
 # Colores de los objetos
 VACIO = (200, 200, 200)

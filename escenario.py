@@ -28,6 +28,10 @@ class Escenario:
         bola_size = int(TAM * 0.8)
         self.bola_img = pygame.transform.smoothscale(bola_png, (bola_size, bola_size))
 
+        cama_png = pygame.image.load("personajes/cama.png").convert_alpha()
+        cama_size = int(TAM * 1.2)
+        self.cama_img = pygame.transform.smoothscale(cama_png, (cama_size, cama_size))
+
         self._deposito_imgs = self._cargar_sprites_deposito()
 
          # --- ÍTEMS TEMPORALES ---
@@ -96,7 +100,9 @@ class Escenario:
                 y = fila * TAM
 
                 if (fila, col) == self.base:
-                    pygame.draw.rect(pantalla, BASE_COLOR, (x, y, TAM, TAM))
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
+                    iw, ih = self.cama_img.get_size()
+                    pantalla.blit(self.cama_img, (x + (TAM - iw)//2, y + (TAM - ih)//2))
                     # Dibuja ratones contabilizados en BASE
                     #self._dibujar_stack(pantalla, x, y, self.entregados_base)
 
