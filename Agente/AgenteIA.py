@@ -1,5 +1,5 @@
 import pygame
-from config import TAM, FILAS, COLS, CELDA_MURO, CELDA_RATON, CELDA_VACIA
+from config import TAM, FILAS, COLS, CELDA_MURO, CELDA_RATON, CELDA_VACIA, COSTOS
 from .busquedaRuta import dijkstra
 from .energia import Energia
 from .animaciones import Animaciones
@@ -215,8 +215,9 @@ class AgenteIA:
         nc = self.col + dc
         if 0 <= nf < FILAS and 0 <= nc < COLS and mapa[nf][nc] != CELDA_MURO:
             self.fila, self.col = nf, nc
-            if self.energia.valor > 0:
-                self.energia.valor = max(0, self.energia.valor - self.energia.costo_paso)
+        # energía depende del coste del terreno
+            coste = COSTOS.get(mapa[nf][nc], 1)
+            self.energia.valor = max(0, self.energia.valor - coste * self.energia.costo_paso)
 # ---------------- Renderizado ----------------
     def dibujar(self, pantalla):
         dibujar(self, pantalla)

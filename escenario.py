@@ -23,6 +23,7 @@ class Escenario:
                 x = col * TAM
                 y = fila * TAM
 
+                #base y depósito
                 if (fila, col) == self.base:
                     pygame.draw.rect(pantalla, BASE_COLOR, (x, y, TAM, TAM))
                     # Dibuja ratones contabilizados en BASE
@@ -35,11 +36,24 @@ class Escenario:
 
                 elif valor == CELDA_MURO:
                     pygame.draw.rect(pantalla, MURO, (x, y, TAM, TAM))
-
+                
+                #ratones
                 elif valor == CELDA_RATON:
                     pygame.draw.rect(pantalla, CELDA_RATON, (x, y, TAM, TAM))
                     img_w, img_h = self.raton_img.get_size()
                     pantalla.blit(self.raton_img, (x + (TAM - img_w)//2, y + (TAM - img_h)//2))
+                    
+                # Agua
+                elif valor == CELDA_AGUA:
+                    pygame.draw.rect(pantalla, (0, 150, 255), (x, y, TAM, TAM))
+
+                # Alfombra
+                elif valor == CELDA_ALFOMBRA:
+                    pygame.draw.rect(pantalla, (255, 200, 150), (x, y, TAM, TAM))
+
+                # Celdas vacías
+                elif valor == CELDA_VACIA:
+                    pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
 
                 else:
                     pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))

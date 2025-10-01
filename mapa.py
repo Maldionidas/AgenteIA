@@ -1,7 +1,7 @@
 import random
-from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_RATON, BASE, DEPOSITO
+from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_RATON,CELDA_AGUA, CELDA_ALFOMBRA, BASE, DEPOSITO
 
-def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20):
+def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20, num_agua=10, num_alfombra=10):
     """Genera un mapa con muros, obstáculos aleatorios y ratones aleatorios en celdas libres."""
     mapa = [[CELDA_VACIA for _ in range(COLS)] for _ in range(FILAS)]
 
@@ -34,5 +34,19 @@ def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20):
     obstaculos = random.sample(libres, min(num_obstaculos, len(libres)))
     for f, c in obstaculos:
         mapa[f][c] = CELDA_MURO
+        
+     # --- AGUA ---
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in [BASE, DEPOSITO]]
+    aguas = random.sample(libres, min(num_agua, len(libres)))
+    for f, c in aguas:
+        mapa[f][c] = CELDA_AGUA
+
+    # --- ALFOMBRA ---
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in [BASE, DEPOSITO]]
+    alfombras = random.sample(libres, min(num_alfombra, len(libres)))
+    for f, c in alfombras:
+        mapa[f][c] = CELDA_ALFOMBRA
 
     return mapa
