@@ -31,7 +31,7 @@ class AgenteIA:
         self.deposito = deposito
         
         # Energía
-        self.energia = Energia(energia_max=200, recarga_por_segundo=10, costo_paso=1)
+        self.energia = Energia(energia_max=300, recarga_por_segundo=40, costo_paso=1)
 
         # Sprites del gato
         self.images = {

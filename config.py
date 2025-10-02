@@ -1,7 +1,7 @@
 import pygame
 #Configuración inicial
 TAM = 40 #tamaño de las celdas en px
-FILAS, COLS = 20, 20 #filas y columnas
+FILAS, COLS = 25, 45 #filas y columnas
 ANCHO, ALTO = COLS * TAM, FILAS * TAM #dimension del mapa
 
 # --- Tipos de celdas (IDs) ---
@@ -38,4 +38,4 @@ FUENTE = pygame.font.SysFont("Arial", 24)
 #casilla para recargar bombas
 BASE = (1, 1)
 DEPOSITO = (1, COLS-2)
-VELOCIDAD = 4
+VELOCIDAD = 9

@@ -186,7 +186,7 @@ class Escenario:
                     pygame.draw.rect(pantalla, VACIO, (x, y, TAM, TAM))
 
                 # Grid
-                pygame.draw.rect(pantalla, (100, 100, 100), (col*TAM, fila*TAM, TAM, TAM), 1)
+                #pygame.draw.rect(pantalla, (100, 100, 100), (col*TAM, fila*TAM, TAM, TAM), 1)
 
     def _dibujar_stack(self, pantalla, x, y, n):
         """(Se deja por si lo quieres usar; ahora la caja ya muestra 0..4 visualmente)"""
