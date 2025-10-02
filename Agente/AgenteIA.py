@@ -1,9 +1,11 @@
+# AgenteIA.py
 import pygame
 from config import TAM, FILAS, COLS, CELDA_MURO, CELDA_RATON, CELDA_VACIA, COSTOS
 from .busquedaRuta import dijkstra
 from .energia import Energia
 from .animaciones import Animaciones
 from .render import dibujar
+
 class AgenteIA:
     def __init__(self, fila, col, base, deposito, color=(200,50,50)):
         self.fila = fila
@@ -17,7 +19,6 @@ class AgenteIA:
         self.fue_deposito = False
         self.contador_deposito = 0
         self.recolectadas = 0
-        #self.recargando = False
 
         # --- Animación de recoger ---
         self.animando = False
@@ -32,9 +33,6 @@ class AgenteIA:
         # Energía
         self.energia = Energia(energia_max=200, recarga_por_segundo=10, costo_paso=1)
 
-
-        
-
         # Sprites del gato
         self.images = {
             "front": pygame.image.load("personajes/cat_front.png").convert_alpha(),
@@ -45,10 +43,19 @@ class AgenteIA:
         for k, img in self.images.items():
             self.images[k] = pygame.transform.scale(img, (TAM, TAM))
         self.dir = "front"
+
         # Sprite del ratón
         self.raton_img = pygame.image.load("personajes/raton.png").convert_alpha()
         raton_size = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(self.raton_img, (raton_size, raton_size))
+
+        # Re-enfoque periódico (ya lo teníamos)
+        self._ultimo_recalculo = 0
+        self._cooldown_recalculo_ms = 300
+
+        # Para la recarga en base
+        self.recargando = False
+        self.ultimo_tick = pygame.time.get_ticks()
 
     # --------------- Helpers ---------------
     def _ruta_hacia(self, mapa, destino):
@@ -67,12 +74,57 @@ class AgenteIA:
                     mejor_len = len(r)
         return mejor
 
+    def _recalcular_si_conviene(self, mapa):
+        if self.cargando or self.animando or self.fue_deposito:
+            return
+        if not self.ruta:
+            return
+
+        ahora = pygame.time.get_ticks()
+        if ahora - self._ultimo_recalculo < self._cooldown_recalculo_ms:
+            return
+        self._ultimo_recalculo = ahora
+
+        # Si el objetivo ya no es ratón, cambia al más cercano
+        if self.objetivo is None or self.objetivo[0] < 0 or self.objetivo[1] < 0:
+            destino = self.raton_mas_cercano(mapa)
+            if destino:
+                self._ruta_hacia(mapa, destino)
+            return
+
+        of, oc = self.objetivo
+        if not (0 <= of < FILAS and 0 <= oc < COLS) or mapa[of][oc] != CELDA_RATON:
+            destino = self.raton_mas_cercano(mapa)
+            if destino:
+                self._ruta_hacia(mapa, destino)
+            return
+
+        # Comparar longitudes de ruta
+        ruta_restante_len = len(self.ruta)
+        destino_cercano = self.raton_mas_cercano(mapa)
+        if not destino_cercano:
+            return
+        if destino_cercano == self.objetivo:
+            return
+
+        ruta_cercana = dijkstra(mapa, (self.fila, self.col), [destino_cercano]) or []
+        if ruta_cercana and len(ruta_cercana) < ruta_restante_len:
+            self._ruta_hacia(mapa, destino_cercano)
+            self.estado = "Re-enfocando al ratón más cercano"
+
     # --------------- Lógica principal ---------------
     def actualizar(self, mapa):
-        # --- Si se quedó sin energía ---
-        if self.energia.valor <= 0:
-            self.estado = "Cansancio al límite"
+        # --- NUEVO: si ya no tiene energía y NO está en base, forzar regreso y seguir moviéndose ---
+        if self.energia.valor <= 0 and (self.fila, self.col) != self.base:
+            self.estado = "Sin energía, regresando a base"
+            if self.objetivo != self.base or not self.ruta:
+                self._ruta_hacia(mapa, self.base)
+            if self.ruta:
+                accion = self.ruta.pop(0)
+                # Nota: mover no va a "restar" más (ya estamos en 0), solo avanza.
+                self.mover(accion, mapa)
             return
+        # Si está en base con 0 energía, que pase al bloque de recarga normal más abajo.
 
         # --- Si está en animación de recoger ---
         if self.animando:
@@ -87,7 +139,7 @@ class AgenteIA:
                     self._ruta_hacia(mapa, self.deposito)
             return
 
-        # --- Logica de la energia del agente ---
+        # --- Lógica de energía en base (igual que antes) ---
         if (self.fila, self.col) == self.base:
             ratones = [(f,c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_RATON]
             n_restantes = len(ratones)
@@ -129,7 +181,7 @@ class AgenteIA:
             self.objetivo = None
             self.ruta = []
 
-        # --- Al pisar una pelota: iniciar animación ---
+        # --- Al pisar un ratón: iniciar animación ---
         if not self.cargando and not self.fue_deposito:
             if mapa[self.fila][self.col] == CELDA_RATON:
                 self.animando = True
@@ -137,6 +189,7 @@ class AgenteIA:
                 self.estado = "Recogiendo ratón"
                 self.objetivo = None
                 self.ruta = []
+                mapa[self.fila][self.col] = CELDA_VACIA   # ya no existe el ratón desde ahora
                 return
 
         # --- Al llegar al depósito con un ratón ---
@@ -194,6 +247,19 @@ class AgenteIA:
                     else:
                         self.objetivo = None
 
+        # --- NUEVO: salvaguarda de energía en tiempo real (evita quedarse tirado) ---
+        if not self.cargando and (self.fila, self.col) != self.base:
+            ruta_base_tmp = dijkstra(mapa, (self.fila, self.col), [self.base]) or []
+            costo_base = len(ruta_base_tmp) if ruta_base_tmp else 10**9
+            # +1 paso de colchón y 5% de margen
+            if self.energia.valor <= (int(costo_base * 1.05) + 1):
+                if self.objetivo != self.base:
+                    self.estado = "Regresando a base (ahorro energía)"
+                    self._ruta_hacia(mapa, self.base)
+
+        # --- Re-enfoque dinámico si conviene ---
+        self._recalcular_si_conviene(mapa)
+
         # --- Avanzar un paso ---
         if self.ruta:
             accion = self.ruta.pop(0)
@@ -215,10 +281,12 @@ class AgenteIA:
         nc = self.col + dc
         if 0 <= nf < FILAS and 0 <= nc < COLS and mapa[nf][nc] != CELDA_MURO:
             self.fila, self.col = nf, nc
-        # energía depende del coste del terreno
+            # energía depende del coste del terreno
             coste = COSTOS.get(mapa[nf][nc], 1)
-            self.energia.valor = max(0, self.energia.valor - coste * self.energia.costo_paso)
-# ---------------- Renderizado ----------------
+            # Si estamos en 0, mantener en 0 para que pueda "arrastrarse" a la base
+            if self.energia.valor > 0:
+                self.energia.valor = max(0, self.energia.valor - coste * self.energia.costo_paso)
+
+    # ---------------- Renderizado ----------------
     def dibujar(self, pantalla):
         dibujar(self, pantalla)
-   

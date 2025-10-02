@@ -23,11 +23,11 @@ COSTOS = {
 }
 
 # Colores de los objetos
-VACIO = (200, 200, 200)
+VACIO = (90,90,90)
 MURO = (60, 60, 60)
 DESTRUIBLE = (160, 100, 40)
 JUGADOR = (50, 100, 255)
-CELDA_RATON = (100, 100, 100)
+CELDA_RATON = VACIO
 BASE_COLOR = (0, 100, 255)   # Azul para la base
 DEPOSITO_COLOR = (0, 255, 0)
 
