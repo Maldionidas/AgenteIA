@@ -12,7 +12,7 @@ class Escenario:
         self.entregados_base = 0
         self.entregados_deposito = 0
 
-        original = pygame.image.load("AgenteIA/personajes/raton.png").convert_alpha()
+        original = pygame.image.load("personajes/raton.png").convert_alpha()
         raton_size = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(original, (raton_size, raton_size))
 
