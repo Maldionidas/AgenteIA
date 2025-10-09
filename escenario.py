@@ -30,6 +30,7 @@ class Escenario:
         # contadores visibles independientes
         self.entregados_base = 0
         self.entregados_deposito = 0
+        self.gato_pos = None
 
         # Imagen del ratón (ya la tenías)
         original = pygame.image.load("personajes/raton.png").convert_alpha()
@@ -61,6 +62,9 @@ class Escenario:
         self._last_food_spawn = pygame.time.get_ticks()
         self._platos_colocados = 0  # opcional: contador si te sirve
 
+    def set_gato_pos(self, fila, col):
+        self.gato_pos = (fila, col)
+
     def _sincronizar_lista_con_mapa(self):
         """Si el gato levantó un ratón (la celda dejó de ser CELDA_RATON), lo eliminamos de la lista."""
         vivos = []
@@ -73,7 +77,7 @@ class Escenario:
         """
         Mover ratones y actualizar el mapa.
         1) Liberamos celdas ratón -> VACÍA
-        2) Movemos en orden aleatorio solo a VACÍAS (evitan agua/alfombra/base/depósito por definición)
+        2) Movemos en orden aleatorio solo a VACÍAS
         3) Recolocamos CELDA_RATON; evitamos colisiones
         """
         # Paso 1: liberar
@@ -87,9 +91,11 @@ class Escenario:
         ocupadas = set()
         for r in orden:
             pos_antes = (r.fila, r.col)
-            r.actualizar(self.mapa)
+            # PASAR gato_pos (si None, el ratón sigue “estúpido” aleatorio)
+            r.actualizar(self.mapa, self.gato_pos)
             pos_despues = (r.fila, r.col)
             if pos_despues in ocupadas:
+                # colisión: revertir
                 r.fila, r.col = pos_antes
                 pos_despues = pos_antes
             ocupadas.add(pos_despues)

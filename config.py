@@ -1,7 +1,7 @@
 import pygame
 #Configuración inicial
 TAM = 40 #tamaño de las celdas en px
-FILAS, COLS = 25, 45 #filas y columnas
+FILAS, COLS = 22, 32 #filas y columnas
 ANCHO, ALTO = COLS * TAM, FILAS * TAM #dimension del mapa
 
 # --- Tipos de celdas (IDs) ---
@@ -16,13 +16,14 @@ CELDA_COMIDA = 6      # NUEVO
 # Costos por celda
 COSTOS = {
     CELDA_VACIA: 1,
-    CELDA_RATON: 1,   # mismo que vacío, para que pueda pararse encima
-    CELDA_MURO:  float("inf"),  # inaccesible
-    CELDA_AGUA:  2,
+    CELDA_RATON: 1,
+    CELDA_AGUA: 2,
     CELDA_ALFOMBRA: 1.5,
-    CELDA_ESTAMBRE: 1,  # transitable
-    CELDA_COMIDA: 1,    # transitable
+    CELDA_COMIDA: 1,     # plato
+    CELDA_ESTAMBRE: 1,   # bola
+    CELDA_MURO: float("inf"),
 }
+
 
 # Colores de los objetos (solo fallback si faltan imágenes)
 VACIO = (90, 90, 90)
@@ -39,3 +40,17 @@ FUENTE = pygame.font.SysFont("Arial", 24)
 BASE = (1, 1)
 DEPOSITO = (1, COLS-2)
 VELOCIDAD = 9
+
+# --- ENERGÍA Y PERSECUCIÓN DEL GATO ---
+ENERGIA_MAX = 100.0          # tope de energía
+ENERGIA_SPRINT_POR_PASO = 1.5 # costo por celda solo cuando persigue
+ENERGIA_REGEN_POR_TICK = 4.0  # cuánto regenera por tick estando en la cama (BASE)
+
+# Cada cuánto se mueve el gato (ms) — similar a los ratones para que se vea fluido
+AGENTE_TICK_MS = 140
+
+# --- Percepción y sprint del gato ---
+VISION_CELDAS = 7            # alcance real en pasos (por ruta, respetando muros)
+COSTO_PASO_NORMAL = 1.0
+COSTO_PASO_CHASE  = 1.5      # costo por paso cuando está persiguiendo
+
