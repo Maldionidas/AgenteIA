@@ -1,7 +1,7 @@
 import pygame
 #Configuración inicial
 TAM = 40 #tamaño de las celdas en px
-FILAS, COLS = 22, 32 #filas y columnas
+FILAS, COLS = 18, 28 #filas y columnas
 ANCHO, ALTO = COLS * TAM, FILAS * TAM #dimension del mapa
 
 # --- Tipos de celdas (IDs) ---
