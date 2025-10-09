@@ -38,7 +38,7 @@ class Escenario:
                 if self.mapa[f][c] == CELDA_RATON:
                     self.ratones.append(Raton(f, c, tick_ms=400))
 
-        self.food_interval_ms = 120_000
+        self.food_interval_ms = 45_000
         self._last_food_spawn = pygame.time.get_ticks()
         self._platos_colocados = 0
 

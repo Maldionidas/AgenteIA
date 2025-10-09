@@ -1,6 +1,6 @@
 # Agente/planner.py
 from config import FILAS, COLS, CELDA_RATON
-from .busquedaRuta import dijkstra
+from .busquedaRuta import dijkstra, dijkstra_con_costo
 from .percepcion import raton_visible_y_ruta
 
 def _ruta_hacia(agent, mapa, destino):
@@ -18,7 +18,6 @@ def recalcular_si_conviene(agent, mapa, VISION, cooldown_ms):
         return
     agent._ultimo_recalculo = ahora
 
-    # Si el objetivo dejó de ser un ratón válido, buscar otro SOLO si está en visión
     if agent.objetivo is None or agent.objetivo[0] < 0 or agent.objetivo[1] < 0:
         destino, ruta_vis = raton_visible_y_ruta(agent, mapa, VISION)
         if destino:
@@ -31,7 +30,7 @@ def recalcular_si_conviene(agent, mapa, VISION, cooldown_ms):
 
     of, oc = agent.objetivo
     if not (0 <= of < FILAS and 0 <= oc < COLS) or mapa[of][oc] != CELDA_RATON:
-        destino, ruta_vis = raton_visible_y_ruta(agent, mapa, VISION)
+        destino, _ = raton_visible_y_ruta(agent, mapa, VISION)
         if destino:
             _ruta_hacia(agent, mapa, destino)
             agent.persiguiendo = True
@@ -40,17 +39,15 @@ def recalcular_si_conviene(agent, mapa, VISION, cooldown_ms):
             agent.persiguiendo = False
         return
 
-    # Comparar longitudes de ruta pero solo con un ratón VISIBLE
-    ruta_restante_len = len(agent.ruta)
+    # Comparar por COSTO, no por longitud
+    _, costo_restante = dijkstra_con_costo(mapa, (agent.fila, agent.col), [agent.objetivo])
     destino_cercano, ruta_cercana = raton_visible_y_ruta(agent, mapa, VISION)
     if not destino_cercano or not ruta_cercana:
         agent.persiguiendo = False
         return
 
-    if destino_cercano == agent.objetivo:
-        return
-
-    if len(ruta_cercana) < ruta_restante_len:
+    _, costo_cercano = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino_cercano])
+    if costo_cercano + 1e-9 < costo_restante:
         _ruta_hacia(agent, mapa, destino_cercano)
         agent.persiguiendo = True
-        agent.estado = "Re-enfocando al ratón visible más cercano"
+        agent.estado = "Re-enfocando al ratón visible más barato"

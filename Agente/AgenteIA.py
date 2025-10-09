@@ -27,6 +27,7 @@ from .interacciones import (
     planear_si_no_hay_ruta,
     salvaguarda_energia,                     
     mantener_persecucion_o_volver_flujo,     
+    prioridad_plato_fuerte,
 )
 
 from .movimiento import mover as mover_fn
@@ -68,7 +69,7 @@ class AgenteIA:
         }
         self.dir = "front"
 
-        # Sprite ratón (para render)
+        # Sprite ratón
         raton = pygame.image.load("personajes/raton.png").convert_alpha()
         rs = int(TAM * 0.4)
         self.raton_img = pygame.transform.scale(raton, (rs, rs))
@@ -78,50 +79,55 @@ class AgenteIA:
         self.ultimo_tick = pygame.time.get_ticks()
         self.recargando = False
         self.persiguiendo = False
+        self.yendo_por_leche = False
 
-    # util interno para ticks
     def _ticks(self):
         return pygame.time.get_ticks()
 
-    # mover (delegado)
     def mover(self, accion, mapa):
         mover_fn(self, accion, mapa)
 
     def actualizar(self, mapa):
-        # 1) flags/constantes dinámicas
+        # 1) Flags y costo por paso
         ensure_runtime_flags(self)
         self.energia.costo_paso = COSTO_SPRINT if self.persiguiendo else COSTO_NORMAL
 
-        # 2) BEBIENDO
+        # 2) Prioridad absoluta para PLATO (si aparece, ignora todo salvo depósito)
+        prioridad_plato_fuerte(self, mapa)
+
+        # 3) BEBIENDO
         if handle_bebiendo(self, mapa):
             return
 
-        # 3) JUGANDO
+        # 4) JUGANDO (se nos había pasado llamar esto)
         if handle_jugando(self, mapa):
             return
 
-        # 4) SIN ENERGÍA (fuera de base)
-        if handle_sin_energia(self, mapa):
-            return
-
-        # 5) Animación de recoger (si está corriendo)
+        # 5) Animación de recoger (si está en curso)
         if end_pick_animation_if_done(self, mapa):
-            if self.animando:  # si sigue animando, detener aquí
+            if self.animando:
                 return
-            # si terminó, ya se programó ir a depósito; continuar flujo
 
-        # 6) En base: recargar si hace falta
-        if handle_en_base_y_recarga(self, mapa):
-            return
-    
-        # 7) Llegó a base tras depósito: sumar recolectadas (comportamiento previo)
+        # 6) Sin energía (si vamos por leche, no interrumpir)
+        if not self.yendo_por_leche:
+            if handle_sin_energia(self, mapa):
+                return
+
+        # 7) En base: recarga (si vamos por leche, no quedarse)
+        if not self.yendo_por_leche:
+            if handle_en_base_y_recarga(self, mapa):
+                return
+        # baseline para delta (evita recarga de golpe al volver a base)
+        self.ultimo_tick = self._ticks()
+
+        # 8) Contabilizar regreso a base tras depósito (igual)
         if not self.cargando and self.fue_deposito and (self.fila, self.col) == self.base:
             self.recolectadas += 1
             self.fue_deposito = False
             self.objetivo = None
             self.ruta = []
 
-        # 8) Interacciones al pisar celda (ratón, plato, estambre)
+        # 9) Interacciones al pisar celda
         if step_on_raton(self, mapa):
             return
         if step_on_plato(self, mapa):
@@ -129,35 +135,28 @@ class AgenteIA:
         if step_on_estambre(self, mapa):
             return
 
-        # 9) Depósito (si llegó con un ratón)
+        # 10) Depósito si llegó con ratón
         if handle_deposito(self, mapa):
-            # ya planeó siguiente movimiento o regreso a base
             pass
 
-        # 10) Prioridad plato (interrumpe lo que sea)
-        if prioridad_plato(self, mapa):
-            pass
-
-        # 11) Planear si no hay ruta
+        # 11) Planear si no hay ruta (respetando prioridad a plato)
         planear_si_no_hay_ruta(self, mapa)
 
-        # 12) Salvaguarda de energía
-        salvaguarda_energia(self, mapa)
+        # 12) Salvaguarda de energía (se ignora si va por leche)
+        if not self.yendo_por_leche:
+            salvaguarda_energia(self, mapa)
 
-        # 13) Re-enfoque (solo si NO persigue; si persigue, mantener o volver a flujo)
+        # 13) Re-enfoque / persecución
         if not self.bebiendo and not self.jugando:
             if not self.persiguiendo:
                 recalcular_si_conviene(self, mapa, VISION, RECALC_COOLDOWN_MS)
             else:
                 mantener_persecucion_o_volver_flujo(self, mapa)
 
-        # 14) Movimiento final de un paso
+        # 14) Movimiento
         if self.ruta and not self.bebiendo and not self.jugando:
             accion = self.ruta.pop(0)
             self.mover(accion, mapa)
-        
-        self.ultimo_tick = self._ticks()
 
-    # Render delega a módulo original (sin cambios visuales)
     def dibujar(self, pantalla):
         dibujar_render(self, pantalla)
