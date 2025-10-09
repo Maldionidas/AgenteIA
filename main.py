@@ -6,7 +6,7 @@ from Agente.AgenteIA import AgenteIA
 
 pygame.init()
 pantalla = pygame.display.set_mode((ANCHO, ALTO))# ventana
-pygame.display.set_caption("Bomberman Grid Movement")#titulo
+pygame.display.set_caption("Cat Grid Movement")#titulo
 
 # --- Instancias ---
 

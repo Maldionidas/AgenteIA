@@ -3,7 +3,7 @@ import pygame
 from .busquedaRuta import dijkstra, dijkstra_con_costo
 from .percepcion import raton_mas_cercano
 from .constants import (VISION, COSTO_SPRINT, COSTO_NORMAL, JUEGO_MS, BEBER_MS,
-                        DRENA_JUEGO_POR_SEG)
+                        DRENA_JUEGO_POR_SEG, ESTAMBRE_COOLDOWN_MS)
 from config import FILAS, COLS, CELDA_RATON, CELDA_COMIDA, CELDA_ESTAMBRE
 
 def ensure_runtime_flags(agent):
@@ -30,7 +30,7 @@ def ensure_runtime_flags(agent):
     if not hasattr(agent, "ignorar_estambre_hasta_base"):
         agent.ignorar_estambre_hasta_base = False
     if not hasattr(agent, "_evitar_descanso_hasta"):
-        agent._evitar_descanso_hasta = 0  # evita que justo al terminar leche entre a "Descansando"
+        agent._evitar_descanso_hasta = 0  # evita descanso justo tras beber
 
 def handle_bebiendo(agent, mapa):
     if not agent.bebiendo:
@@ -43,8 +43,7 @@ def handle_bebiendo(agent, mapa):
         agent.energia.valor = agent.energia.energia_max
         agent.yendo_por_leche = False
         agent.recargando = False
-        agent._evitar_descanso_hasta = ahora + 1500  # evita que inmediatamente intente descansar
-        # Plan: ir al ratón más cercano por COSTO
+        agent._evitar_descanso_hasta = ahora + 1500  # antirebote de descanso
         destino = raton_mas_cercano(agent, mapa)
         if destino:
             ruta, _ = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino])
@@ -54,7 +53,7 @@ def handle_bebiendo(agent, mapa):
             agent.estado = "Persiguiendo"
         else:
             agent.estado = "Listo"
-    return True  # mientras está bebiendo (o en el frame final), no hacer más
+    return True
 
 def handle_jugando(agent, mapa):
     if not agent.jugando:
@@ -66,17 +65,15 @@ def handle_jugando(agent, mapa):
         agent.energia.valor = max(0, agent.energia.valor - DRENA_JUEGO_POR_SEG * delta)
 
     agent.estado = "Jugando con estambre"
-    # Termina de jugar (normal)
     if ahora - agent.inicio_juego >= agent.tiempo_juego_ms:
         agent.jugando = False
         agent.estado = "Listo"
-        agent.cooldown_estambre_hasta = ahora + 3000  # *** cooldown global de 3s para volver a jugar ***
-    # Corta juego por energía en cero
+        agent.cooldown_estambre_hasta = ahora + ESTAMBRE_COOLDOWN_MS  # *** 2s ***
     elif agent.energia.valor <= 0 and (agent.fila, agent.col) != agent.base:
         agent.jugando = False
         agent.persiguiendo = False
         agent.estado = "Sin energía, regresando a base"
-        agent.cooldown_estambre_hasta = ahora + 3000  # también aplica cooldown
+        agent.cooldown_estambre_hasta = ahora + ESTAMBRE_COOLDOWN_MS
         agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.base]) or []
     return True
 
@@ -93,20 +90,16 @@ def handle_sin_energia(agent, mapa):
     return True
 
 def handle_en_base_y_recarga(agent, mapa):
-    # Si acaba de beber leche, evitar entrar a "Descansando" por un rato
     if (agent.fila, agent.col) == agent.base:
         if pygame.time.get_ticks() < getattr(agent, "_evitar_descanso_hasta", 0):
             agent.recargando = False
             return False
-
     if (agent.fila, agent.col) != agent.base:
         return False
 
     agent.persiguiendo = False
-    # Ya en base, no hace falta seguir ignorando estambre (si llega a descansar, da igual)
     agent.ignorar_estambre_hasta_base = False
 
-    # Cuenta ratones restantes
     ratones = [(f, c) for f in range(FILAS) for c in range(COLS) if mapa[f][c] == CELDA_RATON]
     n_restantes = len(ratones)
 

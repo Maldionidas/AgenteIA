@@ -1,71 +1,134 @@
 import random
-from config import FILAS, COLS, CELDA_MURO, CELDA_VACIA, CELDA_RATON, CELDA_AGUA, CELDA_ALFOMBRA, CELDA_ESTAMBRE, BASE, DEPOSITO
+import math
+from config import (FILAS, COLS, CELDA_VACIA, CELDA_MURO, CELDA_AGUA, CELDA_ALFOMBRA,
+                    CELDA_ESTAMBRE, CELDA_RATON, BASE, DEPOSITO)
 
-def generar_mapa(muros_fijos=None, num_ratones=10, num_obstaculos=20, num_agua=10, num_alfombra=10, num_estambre=2):
-    """Genera un mapa con muros, obstáculos aleatorios, ratones aleatorios y 2 bolas de estambre en celdas válidas."""
+def _vecinos4(f, c):
+    return [(f-1,c), (f+1,c), (f,c-1), (f,c+1)]
+
+def _dentro(f, c):
+    return 0 <= f < FILAS and 0 <= c < COLS
+
+def _colocar_clusters(mapa, celda_tipo, cantidad_celdas, tam_min=1, tam_max=5, intentos=500):
+    restantes = cantidad_celdas
+    guardas = {(BASE[0], BASE[1]), (DEPOSITO[0], DEPOSITO[1])}
+
+    while restantes > 0 and intentos > 0:
+        intentos -= 1
+        f = random.randrange(FILAS)
+        c = random.randrange(COLS)
+        if (f, c) in guardas or mapa[f][c] != CELDA_VACIA:
+            continue
+
+        tam = random.randint(tam_min, tam_max)
+        cluster = [(f, c)]
+        usados = {(f, c)}
+        cola = [(f, c)]
+        while cola and len(cluster) < tam:
+            cf, cc = cola.pop(0)
+            vecinos = _vecinos4(cf, cc)
+            random.shuffle(vecinos)
+            for nf, nc in vecinos:
+                if not _dentro(nf, nc):
+                    continue
+                if (nf, nc) in usados:
+                    continue
+                if (nf, nc) in guardas:
+                    continue
+                if mapa[nf][nc] != CELDA_VACIA:
+                    continue
+                if random.random() < 0.7:
+                    cluster.append((nf, nc))
+                    usados.add((nf, nc))
+                    cola.append((nf, nc))
+                    if len(cluster) >= tam:
+                        break
+
+        for cf, cc in cluster:
+            if restantes <= 0:
+                break
+            mapa[cf][cc] = celda_tipo
+            restantes -= 1
+
+def _dist_manhattan(a, b):
+    return abs(a[0]-b[0]) + abs(a[1]-b[1])
+
+def _colocar_separado(mapa, celda_tipo, cantidad, min_dist=7, avoid=set(), max_intentos=4000):
+    """
+    Coloca 'cantidad' celdas de tipo 'celda_tipo' garantizando una distancia mínima
+    de 'min_dist' (Manhattan) entre cada par colocado. Si no se logra, relaja
+    progresivamente la distancia.
+    """
+    colocados = []
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in avoid]
+    random.shuffle(libres)
+
+    intento = 0
+    d = min_dist
+    while len(colocados) < cantidad and intento < max_intentos:
+        intento += 1
+        if not libres:
+            break
+        f, c = libres.pop()
+        pos = (f, c)
+        ok = True
+        for p in colocados:
+            if _dist_manhattan(p, pos) < d:
+                ok = False
+                break
+        if ok:
+            mapa[f][c] = celda_tipo
+            colocados.append(pos)
+        # Si nos atoramos mucho, relajamos la distancia
+        if intento % 500 == 0 and d > 3:
+            d -= 1
+    return colocados
+
+def _colocar_al_azar(mapa, celda_tipo, cantidad, avoid=set()):
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in avoid]
+    random.shuffle(libres)
+    puestos = 0
+    for f, c in libres:
+        if puestos >= cantidad:
+            break
+        mapa[f][c] = celda_tipo
+        puestos += 1
+
+def generar_mapa(num_ratones=10, num_obstaculos=20, num_agua=8, num_alfombra=10, num_estambre=4):
     mapa = [[CELDA_VACIA for _ in range(COLS)] for _ in range(FILAS)]
 
-    # Bordes del mapa, delimitador
-    for f in range(FILAS):
-        for c in range(COLS):
-            if f == 0 or f == FILAS-1 or c == 0 or c == COLS-1:
-                mapa[f][c] = CELDA_MURO
+    # base/deposito libres
+    mapa[BASE[0]][BASE[1]] = CELDA_VACIA
+    mapa[DEPOSITO[0]][DEPOSITO[1]] = CELDA_VACIA
 
-    # Agregar muros fijos personalizados
-    if muros_fijos:
-        for f, c in muros_fijos:
-            if 0 <= f < FILAS and 0 <= c < COLS:
-                mapa[f][c] = CELDA_MURO
+    # muros sueltos
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if (f, c) not in (BASE, DEPOSITO)]
+    random.shuffle(libres)
+    for i in range(min(num_obstaculos, len(libres))):
+        f, c = libres[i]
+        mapa[f][c] = CELDA_MURO
 
-    # Posiciones libres básicas (evitar base y depósito)
-    def libres_excluyendo(*excluir):
-        excl = set(excluir)
-        return [(f, c) for f in range(FILAS) for c in range(COLS)
-                if mapa[f][c] == CELDA_VACIA and (f, c) not in excl]
+    # clusters de agua y alfombra
+    _colocar_clusters(mapa, CELDA_AGUA, num_agua, tam_min=1, tam_max=5)
+    _colocar_clusters(mapa, CELDA_ALFOMBRA, num_alfombra, tam_min=1, tam_max=5)
 
-    # Seleccionar posiciones de ratones
-    libres = libres_excluyendo(BASE, DEPOSITO)
-    pelotas = random.sample(libres, min(num_ratones, len(libres)))
-    for f, c in pelotas:
+    # ESTAMBRES RETIRADOS (min distancia Manhattan 7; relax si falta espacio)
+    _colocar_separado(mapa, CELDA_ESTAMBRE, num_estambre, min_dist=7,
+                      avoid={(BASE[0], BASE[1]), (DEPOSITO[0], DEPOSITO[1])})
+
+    # ratones
+    libres = [(f, c) for f in range(FILAS) for c in range(COLS)
+              if mapa[f][c] == CELDA_VACIA and (f, c) not in (BASE, DEPOSITO)]
+    random.shuffle(libres)
+    for i in range(min(num_ratones, len(libres))):
+        f, c = libres[i]
         mapa[f][c] = CELDA_RATON
 
-    # Recalcular libres para obstáculos (no base, no depósito, no ratones)
-    libres = libres_excluyendo(BASE, DEPOSITO)
-    obstaculos = random.sample(libres, min(num_obstaculos, len(libres)))
-    for f, c in obstaculos:
-        mapa[f][c] = CELDA_MURO
-        
-    # --- AGUA ---
-    libres = libres_excluyendo(BASE, DEPOSITO)
-    aguas = random.sample(libres, min(num_agua, len(libres)))
-    for f, c in aguas:
-        mapa[f][c] = CELDA_AGUA
-
-    # --- ALFOMBRA ---
-    libres = libres_excluyendo(BASE, DEPOSITO)
-    alfombras = random.sample(libres, min(num_alfombra, len(libres)))
-    for f, c in alfombras:
-        mapa[f][c] = CELDA_ALFOMBRA
-
-    # --- ESTAMBRE (2 bolas, lejos una de otra y fuera de agua/alfombra/base/depósito) ---
-    def celdas_validas_estambre():
-        return [(f, c) for f in range(FILAS) for c in range(COLS)
-                if mapa[f][c] == CELDA_VACIA and (f, c) not in (BASE, DEPOSITO)]
-
-    candidatos = celdas_validas_estambre()
-    random.shuffle(candidatos)
-
-    estambres_colocados = 0
-    colocados = []
-    MIN_DIST = 6  # "retiradas una de otra"
-    for f, c in candidatos:
-        if estambres_colocados >= num_estambre:
-            break
-        # Deben estar lejos entre sí
-        if any(abs(f - ef) + abs(c - ec) < MIN_DIST for (ef, ec) in colocados):
-            continue
-        mapa[f][c] = CELDA_ESTAMBRE
-        colocados.append((f, c))
-        estambres_colocados += 1
+    # garantizar base y depósito libres
+    mapa[BASE[0]][BASE[1]] = CELDA_VACIA
+    mapa[DEPOSITO[0]][DEPOSITO[1]] = CELDA_VACIA
 
     return mapa
