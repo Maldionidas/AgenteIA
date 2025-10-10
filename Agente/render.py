@@ -1,8 +1,9 @@
 import pygame
 import math
-from config import TAM, COLS, FILAS
+from config import TAM, COLS, FILAS,COSTOS
 from .constants import PATH_RGBA
 
+costo_total_ruta = None
 def _ruta_posiciones_desde_acciones(start_rc, acciones):
     # Convierte ["arriba","derecha",...] a lista de (f,c) visitadas
     f, c = start_rc
@@ -26,9 +27,16 @@ def dibujar(self, pantalla):
         path_surf.fill(PATH_RGBA)
         # calculamos pos futuras desde (fila,col) y acciones pendientes
         posiciones = _ruta_posiciones_desde_acciones((self.fila, self.col), self.ruta)
+        costo_acumulado = 0
         for (rf, rc) in posiciones:
             if 0 <= rf < FILAS and 0 <= rc < COLS:
                 pantalla.blit(path_surf, (rc * TAM, rf * TAM))
+                 # Calcular el costo de la celda en la ruta (suponemos que `COSTOS` es un diccionario global)
+                celda = self.mapa[rf][rc]
+                costo = COSTOS.get(celda, 1)  # Asumimos que "1" es el costo por defecto
+                costo_acumulado += costo 
+        self.costo_total_ruta = costo_acumulado
+                
 
     # --- Animación de recoger (ratón sobre la cabeza) ---
     if getattr(self, "animando", False):
@@ -75,10 +83,10 @@ def dibujar(self, pantalla):
     pygame.draw.rect(pantalla, (30, 30, 30), (hud_x, hud_y, bar_w, bar_h))
     pct = 0 if self.energia.energia_max == 0 else self.energia.valor / self.energia.energia_max
     pygame.draw.rect(pantalla, (50, 200, 50), (hud_x, hud_y, int(bar_w * pct), bar_h))
-    txt = self.font.render("ENERGIA", True, (255, 255, 255))
+    txt = self.font.render(f"ENERGIA{int(self.energia.valor)} / {self.energia.energia_max}", True, (255, 255, 255))
     pantalla.blit(txt, (hud_x, hud_y + bar_h + 4))
 
-    estado_txt = self.font.render(f"Estado: {self.estado}", True, (255, 255, 255))
+    estado_txt = self.font.render(f"Estado: {self.estado}| Costo Ruta: {self.costo_total_ruta}", True, (255, 255, 255))
     fondo = estado_txt.get_rect()
     fondo.midtop = (COLS * TAM // 2, 5)
     pygame.draw.rect(pantalla, (0, 0, 0), fondo.inflate(10, 6))

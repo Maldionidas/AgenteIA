@@ -6,6 +6,7 @@ from .percepcion import raton_visible_y_ruta
 def _ruta_hacia(agent, mapa, destino):
     agent.objetivo = destino
     agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [destino]) or []
+    
 
 def recalcular_si_conviene(agent, mapa, VISION, cooldown_ms):
     if agent.cargando or agent.animando or agent.fue_deposito:

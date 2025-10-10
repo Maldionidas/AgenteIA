@@ -16,7 +16,7 @@ mapa = generar_mapa(num_ratones=10, num_obstaculos=20,num_agua=8, num_alfombra=1
 escenario = Escenario(mapa, BASE, DEPOSITO)
 #jugador = Jugador(1, 1)  # posición inicial del jugador
 bombas = []  # lista de bombas
-ia = AgenteIA(1, 1,BASE, DEPOSITO)  # por ejemplo, empieza abajo a la derecha
+ia = AgenteIA(1, 1,BASE,mapa, DEPOSITO)  # por ejemplo, empieza abajo a la derecha
 
 # --- Bucle principal ---
 corriendo = True

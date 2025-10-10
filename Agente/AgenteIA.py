@@ -32,11 +32,12 @@ from .interacciones import (
 from .movimiento import mover as mover_fn
 
 class AgenteIA:
-    def __init__(self, fila, col, base, deposito, color=(200, 50, 50)):
+    def __init__(self, fila, col, base,mapa, deposito, color=(200, 50, 50)):
         self.fila = fila
         self.col = col
         self.color = color
         self.radio = TAM // 3
+        self.mapa = mapa
 
         self.ruta = []
         self.objetivo = None
