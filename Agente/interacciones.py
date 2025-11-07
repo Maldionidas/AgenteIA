@@ -1,6 +1,6 @@
 # Agente/interacciones.py
 import pygame
-from .busquedaRuta import dijkstra, dijkstra_con_costo
+from .geneticAlg import genetic_shortest, genetic_cost, genetic_route
 from .percepcion import raton_mas_cercano, raton_visible_y_ruta, objetivo_visible_por_celda
 from .constants import VISION, COSTO_SPRINT, COSTO_NORMAL, ESTAMBRE_COOLDOWN_MS
 from config import FILAS, COLS, CELDA_RATON, CELDA_COMIDA, CELDA_ESTAMBRE
@@ -31,7 +31,7 @@ def end_pick_animation_if_done(agent, mapa):
         agent.estado = "Yendo a depositar ratón"
         agent.persiguiendo = False
         if agent.deposito:
-            agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.deposito]) or []
+            agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.deposito]) or []
     return True
 
 def step_on_plato(agent, mapa):
@@ -81,27 +81,27 @@ def handle_deposito(agent, mapa):
 
     destino = raton_mas_cercano(agent, mapa)
     if destino:
-        _, cp = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino])
-        _, cd = dijkstra_con_costo(mapa, destino, [agent.deposito])
-        _, cb = dijkstra_con_costo(mapa, agent.deposito, [agent.base])
+        _, cp = genetic_cost(mapa, (agent.fila, agent.col), [destino])
+        _, cd = genetic_cost(mapa, destino, [agent.deposito])
+        _, cb = genetic_cost(mapa, agent.deposito, [agent.base])
         costo_total = cp + cd + cb
 
         if agent.energia.valor >= int(costo_total * 1.1):
             agent.estado = "Buscando ratón"
             agent.fue_deposito = False
-            ruta, _ = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino])
+            ruta, _ = genetic_cost(mapa, (agent.fila, agent.col), [destino])
             agent.ruta = ruta or []
             agent.ignorar_estambre_hasta_base = False
         else:
             agent.estado = "Cansancio al límite"
             agent.fue_deposito = True
-            agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.base]) or []
+            agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.base]) or []
             agent.objetivo = agent.base
             agent.ignorar_estambre_hasta_base = True
     else:
         agent.estado = "Cansancio al límite"
         agent.fue_deposito = True
-        agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.base]) or []
+        agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.base]) or []
         agent.objetivo = agent.base
         agent.ignorar_estambre_hasta_base = True
     return True
@@ -113,7 +113,7 @@ def _plato_mas_cercano(agent, mapa):
         return None, None
     mejor = None; mejor_ruta = None; mejor_cost = None
     for p in platos:
-        ruta, cost = dijkstra_con_costo(mapa, (agent.fila, agent.col), [p])
+        ruta, cost = genetic_cost(mapa, (agent.fila, agent.col), [p])
         if ruta and (mejor_cost is None or cost < mejor_cost):
             mejor, mejor_ruta, mejor_cost = p, ruta, cost
     return mejor, mejor_ruta
@@ -124,7 +124,7 @@ def _estambre_mas_cercano(agent, mapa):
         return None, None
     mejor = None; mejor_ruta = None; mejor_cost = None
     for p in ests:
-        ruta, cost = dijkstra_con_costo(mapa, (agent.fila, agent.col), [p])
+        ruta, cost = genetic_cost(mapa, (agent.fila, agent.col), [p])
         if ruta and (mejor_cost is None or cost < mejor_cost):
             mejor, mejor_ruta, mejor_cost = p, ruta, cost
     return mejor, mejor_ruta
@@ -152,13 +152,13 @@ def planear_si_no_hay_ruta(agent, mapa):
     if agent.cargando:
         agent.estado = "Yendo a depositar ratón"
         if agent.deposito:
-            agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.deposito]) or []
+            agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.deposito]) or []
         return True
 
     if agent.fue_deposito:
         agent.estado = "Descansando"
         agent.persiguiendo = False
-        agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.base]) or []
+        agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.base]) or []
         agent.objetivo = agent.base
         agent.ignorar_estambre_hasta_base = True
         return True
@@ -181,7 +181,7 @@ def planear_si_no_hay_ruta(agent, mapa):
         # en cooldown: ir a base a esperar/plato
         agent.estado = "Descansando"
         agent.persiguiendo = False
-        agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.base]) or []
+        agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.base]) or []
         agent.objetivo = agent.base
         agent.ignorar_estambre_hasta_base = True
         return True
@@ -201,10 +201,14 @@ def planear_si_no_hay_ruta(agent, mapa):
 
     # 2) Ratón visible -> perseguir
     vis_obj, vis_ruta = raton_visible_y_ruta(agent, mapa, VISION)
-    if vis_obj and vis_ruta and not getattr(agent, "yendo_por_leche", False):
+    if vis_obj and not getattr(agent, "yendo_por_leche", False):
         agent.estado = "Persiguiendo"
         agent.persiguiendo = True
-        agent.ruta = vis_ruta
+        # GA para HUNT (acciones):
+        agent.ruta = genetic_route(mapa, (agent.fila, agent.col), vis_obj,
+                                   mode="HUNT",
+                                   energia_restante=agent.energia.valor,
+                                   cargando=False) or []
         agent.objetivo = vis_obj
         agent.ignorar_estambre_hasta_base = False
         return True
@@ -212,20 +216,24 @@ def planear_si_no_hay_ruta(agent, mapa):
     # 3) Ratón más cercano por costo
     destino = raton_mas_cercano(agent, mapa)
     if destino:
-        ruta_pelota, cp = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino])
-        _, cd = dijkstra_con_costo(mapa, destino, [agent.deposito])
+        ruta_pelota, cp = genetic_cost(mapa, (agent.fila, agent.col), [destino])
+        _, cd = genetic_cost(mapa, destino, [agent.deposito])
         costo_hasta_depo = cp + cd
         if agent.energia.valor >= int(costo_hasta_depo * 1.1):
             agent.estado = "Buscando ratón"
             agent.persiguiendo = False
-            agent.ruta = ruta_pelota or []
+            #agent.ruta = ruta_pelota or []
+            agent.ruta = genetic_route(mapa, (agent.fila, agent.col), destino,
+                                       mode="HUNT",
+                                       energia_restante=agent.energia.valor,
+                                       cargando=False) or (ruta_pelota or [])
             agent.objetivo = destino
             agent.ignorar_estambre_hasta_base = False
             return True
         else:
             agent.estado = "Cansancio al límite"
             agent.persiguiendo = False
-            agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [agent.base]) or []
+            agent.ruta = genetic_shortest(mapa, (agent.fila, agent.col), [agent.base]) or []
             agent.objetivo = agent.base
             agent.ignorar_estambre_hasta_base = True
             return True
@@ -239,7 +247,7 @@ def salvaguarda_energia(agent, mapa):
         return False
     if agent.cargando or (agent.fila, agent.col) == agent.base or agent.bebiendo or agent.jugando:
         return False
-    ruta_base, _ = dijkstra_con_costo(mapa, (agent.fila, agent.col), [agent.base])
+    ruta_base, _ = genetic_cost(mapa, (agent.fila, agent.col), [agent.base])
     costo_base = len(ruta_base) if ruta_base else 10 ** 9
     if agent.energia.valor <= (int(costo_base * 1.05) + 1):
         if agent.objetivo != agent.base:
@@ -260,7 +268,7 @@ def mantener_persecucion_o_volver_flujo(agent, mapa):
         agent.estado = "Buscando ratón"
         destino = raton_mas_cercano(agent, mapa)
         if destino:
-            ruta, _ = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino])
+            ruta, _ = genetic_cost(mapa, (agent.fila, agent.col), [destino])
             agent.ruta = ruta or []
         return
     from config import CELDA_RATON
@@ -275,5 +283,5 @@ def mantener_persecucion_o_volver_flujo(agent, mapa):
             agent.estado = "Buscando ratón"
             destino = raton_mas_cercano(agent, mapa)
             if destino:
-                ruta, _ = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino])
+                ruta, _ = genetic_cost(mapa, (agent.fila, agent.col), [destino])
                 agent.ruta = ruta or []

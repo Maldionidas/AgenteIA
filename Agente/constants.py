@@ -16,3 +16,6 @@ PATH_RGBA = (0, 200, 255, 90)  # celeste translúcido
 
 # Cooldown para NO encadenar pelotas (2s)
 ESTAMBRE_COOLDOWN_MS = 2000
+
+SHOW_PATH_DEBUG = True          # pon False para ocultarlo
+PATH_PREVIEW_STEPS = 10         # pinta solo los próximos N pasos

@@ -54,3 +54,19 @@ VISION_CELDAS = 7            # alcance real en pasos (por ruta, respetando muros
 COSTO_PASO_NORMAL = 1.0
 COSTO_PASO_CHASE  = 1.5      # costo por paso cuando está persiguiendo
 
+# --- GA (planificación de ruta) ---
+GA_HUNT_ENABLED = True   # activa GA para perseguir ratones (estado HUNT)
+
+GA_PARAMS = dict(
+    max_steps=120, pop_size=80, generations=80,
+    p_crossover=0.90, p_mutation=0.08, tourn_k=3,
+    wall_penalty=1000.0, step_cost=1.0, turn_cost=0.2,
+    catch_bonus=1_000_000.0, deliver_bonus=1_000_000.0,
+    terrain_cost_w=1.0,   # ← NUEVO: peso del costo de celda (COSTOS)
+)
+
+
+# consumo de energía por paso (ejemplo)
+ENERGY_PER_STEP_EMPTY = 1.0      # sin ratón
+ENERGY_PER_STEP_CARRY = 1.4      # cargando ratón
+

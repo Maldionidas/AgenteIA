@@ -3,7 +3,7 @@ import pygame
 from config import TAM
 from .energia import Energia
 from .render import dibujar as dibujar_render
-from .constants import (VISION, COSTO_SPRINT, COSTO_NORMAL, RECALC_COOLDOWN_MS)
+from .constants import (VISION, COSTO_SPRINT, COSTO_NORMAL, RECALC_COOLDOWN_MS, JUEGO_MS, BEBER_MS)
 from .planner import recalcular_si_conviene
 from .percepcion import raton_mas_cercano
 
@@ -45,6 +45,19 @@ class AgenteIA:
         self.fue_deposito = False
         self.contador_deposito = 0
         self.recolectadas = 0
+        self.bebiendo = False
+        self.jugando = False
+        # --- timers/flags que usa states.py ---
+        self.inicio_juego = 0
+        self.tiempo_juego_ms = JUEGO_MS
+        self._ultimo_tick_juego = pygame.time.get_ticks()
+        self.inicio_bebida = 0
+        self.tiempo_bebida_ms = BEBER_MS
+        self._evitar_retrigger_estambre = False
+        self._evitar_retrigger_leche = False
+        self.cooldown_estambre_hasta = 0
+        self.ignorar_estambre_hasta_base = False
+        self._evitar_descanso_hasta = 0
 
         self.animando = False
         self.inicio_animacion = 0
@@ -87,7 +100,7 @@ class AgenteIA:
 
     def actualizar(self, mapa):
         ensure_runtime_flags(self)
-        self.energia.costo_paso = COSTO_SPRINT if self.persiguiendo else COSTO_NORMAL
+        self.energia.costo_paso = int(COSTO_SPRINT if self.persiguiendo else COSTO_NORMAL)
 
         # Prioridad absoluta: plato
         prioridad_plato_fuerte(self, mapa)

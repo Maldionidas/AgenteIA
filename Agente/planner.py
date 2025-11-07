@@ -1,12 +1,14 @@
 # Agente/planner.py
 from config import FILAS, COLS, CELDA_RATON
-from .busquedaRuta import dijkstra, dijkstra_con_costo
+from .geneticAlg import genetic_shortest, genetic_cost, genetic_route
 from .percepcion import raton_visible_y_ruta
 
 def _ruta_hacia(agent, mapa, destino):
     agent.objetivo = destino
-    agent.ruta = dijkstra(mapa, (agent.fila, agent.col), [destino]) or []
-    
+    agent.ruta = genetic_route(mapa, (agent.fila, agent.col), destino,
+                               mode="HUNT",
+                               energia_restante=agent.energia.valor,
+                               cargando=False) or []
 
 def recalcular_si_conviene(agent, mapa, VISION, cooldown_ms):
     if agent.cargando or agent.animando or agent.fue_deposito:
@@ -41,13 +43,13 @@ def recalcular_si_conviene(agent, mapa, VISION, cooldown_ms):
         return
 
     # Comparar por COSTO, no por longitud
-    _, costo_restante = dijkstra_con_costo(mapa, (agent.fila, agent.col), [agent.objetivo])
+    _, costo_restante = genetic_cost(mapa, (agent.fila, agent.col), [agent.objetivo])
     destino_cercano, ruta_cercana = raton_visible_y_ruta(agent, mapa, VISION)
     if not destino_cercano or not ruta_cercana:
         agent.persiguiendo = False
         return
 
-    _, costo_cercano = dijkstra_con_costo(mapa, (agent.fila, agent.col), [destino_cercano])
+    _, costo_cercano = genetic_cost(mapa, (agent.fila, agent.col), [destino_cercano])
     if costo_cercano + 1e-9 < costo_restante:
         _ruta_hacia(agent, mapa, destino_cercano)
         agent.persiguiendo = True
